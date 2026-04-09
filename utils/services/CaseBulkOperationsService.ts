@@ -7,7 +7,7 @@ import { ActivityLogService } from './ActivityLogService';
 import { formatCaseDisplayName } from '../../domain/cases/formatting';
 import { createLogger } from '../logger';
 import { resolveNoteCategories } from '../noteCategories';
-import { syncRuntimeApplications } from '../storageV21Migration';
+import { syncRuntimeApplications } from '@/utils/storageV21Migration';
 import type { AlertWithMatch } from '@/domain/alerts';
 
 const logger = createLogger('CaseBulkOperationsService');
@@ -106,6 +106,116 @@ export class CaseBulkOperationsService {
     return this.fileStorage.touchCaseTimestamps(cases, changedCaseIds, timestamp);
   }
 
+  private async prepareBulkCaseUpdates(
+    caseIds: string[],
+    buildChange: (
+      caseItem: StoredCase,
+      timestamp: string,
+    ) => { updatedCase: StoredCase; activityEntry: CaseActivityEntry } | null,
+  ): Promise<{
+    currentData: NormalizedFileData;
+    casesWithTouchedTimestamps: StoredCase[];
+    updatedCases: StoredCase[];
+    activityEntries: CaseActivityEntry[];
+    notFound: string[];
+    timestamp: string;
+  }> {
+    const currentData = await this.readCurrentDataOrThrow();
+    const idsToUpdate = new Set(caseIds);
+    const timestamp = new Date().toISOString();
+    const updatedCases: StoredCase[] = [];
+    const changedCaseIds: string[] = [];
+    const activityEntries: CaseActivityEntry[] = [];
+    const existingIds = this.getExistingCaseIds(currentData.cases);
+    const notFound = this.getNotFoundCaseIds(existingIds, caseIds);
+
+    const casesWithChanges = currentData.cases.map((caseItem) => {
+      if (!idsToUpdate.has(caseItem.id)) {
+        return caseItem;
+      }
+
+      const change = buildChange(caseItem, timestamp);
+      if (!change) {
+        updatedCases.push(caseItem);
+        return caseItem;
+      }
+
+      updatedCases.push(change.updatedCase);
+      changedCaseIds.push(caseItem.id);
+      activityEntries.push(change.activityEntry);
+
+      return change.updatedCase;
+    });
+
+    return {
+      currentData,
+      casesWithTouchedTimestamps: this.touchUpdatedCases(
+        casesWithChanges,
+        changedCaseIds,
+        timestamp,
+      ),
+      updatedCases,
+      activityEntries,
+      notFound,
+      timestamp,
+    };
+  }
+
+  private async writePreparedBulkCaseUpdates(
+    caseIds: string[],
+    buildChange: (
+      caseItem: StoredCase,
+      timestamp: string,
+    ) => { updatedCase: StoredCase; activityEntry: CaseActivityEntry } | null,
+    options: {
+      syncApplications?: (currentData: NormalizedFileData, cases: StoredCase[], timestamp: string) => NormalizedFileData['applications'];
+    } = {},
+  ): Promise<{ updated: StoredCase[]; notFound: string[] }> {
+    const {
+      currentData,
+      casesWithTouchedTimestamps,
+      updatedCases,
+      activityEntries,
+      notFound,
+      timestamp,
+    } = await this.prepareBulkCaseUpdates(caseIds, buildChange);
+
+    const updatedData: NormalizedFileData = {
+      ...currentData,
+      cases: casesWithTouchedTimestamps,
+      activityLog: ActivityLogService.mergeActivityEntries(currentData.activityLog, activityEntries),
+    };
+
+    if (options.syncApplications) {
+      updatedData.applications = options.syncApplications(
+        currentData,
+        casesWithTouchedTimestamps,
+        timestamp,
+      );
+    }
+
+    await this.fileStorage.writeNormalizedData(updatedData);
+
+    return { updated: updatedCases, notFound };
+  }
+
+  private async performBulkCaseUpdate(
+    caseIds: string[],
+    buildChange: (
+      caseItem: StoredCase,
+      timestamp: string,
+    ) => { updatedCase: StoredCase; activityEntry: CaseActivityEntry } | null,
+    options: {
+      syncApplications?: (currentData: NormalizedFileData, cases: StoredCase[], timestamp: string) => NormalizedFileData['applications'];
+    } = {},
+  ) {
+    if (caseIds.length === 0) {
+      return { updated: [], notFound: [] };
+    }
+
+    return await this.writePreparedBulkCaseUpdates(caseIds, buildChange, options);
+  }
+
   // =============================================================================
   // BULK DELETE OPERATIONS
   // =============================================================================
@@ -193,92 +303,51 @@ export class CaseBulkOperationsService {
    * }
    */
   async updateCasesStatus(caseIds: string[], status: CaseStatus): Promise<{ updated: StoredCase[]; notFound: string[] }> {
-    if (caseIds.length === 0) {
-      return { updated: [], notFound: [] };
-    }
-
-    const currentData = await this.readCurrentDataOrThrow();
-
-    const idsToUpdate = new Set(caseIds);
-    const timestamp = new Date().toISOString();
-    const updatedCases: StoredCase[] = [];
-    const changedCaseIds: string[] = [];
-    const activityEntries: CaseActivityEntry[] = [];
-    const notFound: string[] = [];
-
-    // Track which IDs exist
-    const existingIds = this.getExistingCaseIds(currentData.cases);
-    notFound.push(...this.getNotFoundCaseIds(existingIds, caseIds));
-
-    // Update matching cases
-    const casesWithChanges = currentData.cases.map(c => {
-      if (!idsToUpdate.has(c.id)) {
-        return c;
-      }
-
-      const currentStatus = c.caseRecord?.status ?? c.status;
-      
-      // Skip if status is already the same
+    return await this.performBulkCaseUpdate(
+      caseIds,
+      (caseItem, transactionTimestamp) => {
+      const currentStatus = caseItem.caseRecord?.status ?? caseItem.status;
       if (currentStatus === status) {
-        updatedCases.push(c);
-        return c;
+        return null;
       }
 
       const updatedCase: StoredCase = {
-        ...c,
+        ...caseItem,
         status,
         caseRecord: {
-          ...c.caseRecord,
+          ...caseItem.caseRecord,
           status,
-          updatedDate: timestamp,
+          updatedDate: transactionTimestamp,
         },
       };
 
-      updatedCases.push(updatedCase);
-  changedCaseIds.push(c.id);
-
-      // Create activity log entry using factory method
-      activityEntries.push(
-        ActivityLogService.createStatusChangeEntry({
-          caseId: c.id,
-          caseName: formatCaseDisplayName(c),
-          caseMcn: c.caseRecord?.mcn ?? c.mcn ?? null,
+      return {
+        updatedCase,
+        activityEntry: ActivityLogService.createStatusChangeEntry({
+          caseId: caseItem.id,
+          caseName: formatCaseDisplayName(caseItem),
+          caseMcn: caseItem.caseRecord?.mcn ?? caseItem.mcn ?? null,
           fromStatus: currentStatus,
           toStatus: status,
-          timestamp,
-        })
-      );
-
-      return updatedCase;
-    });
-
-    const casesWithTouchedTimestamps = this.touchUpdatedCases(
-      casesWithChanges,
-      changedCaseIds,
-      timestamp,
+          timestamp: transactionTimestamp,
+        }),
+      };
+      },
+      {
+        syncApplications: (currentData, casesWithTouchedTimestamps, timestamp) =>
+          syncRuntimeApplications(
+            {
+              ...currentData,
+              cases: casesWithTouchedTimestamps,
+            },
+            {
+              preferRuntimeCaseFields: true,
+              syncMode: 'status-only',
+              transactionTimestamp: timestamp,
+            },
+          ).applications,
+      },
     );
-
-    // Write updated data
-    const updatedData: NormalizedFileData = {
-      ...currentData,
-      cases: casesWithTouchedTimestamps,
-      applications: syncRuntimeApplications(
-        {
-          ...currentData,
-          cases: casesWithTouchedTimestamps,
-        },
-        {
-          preferRuntimeCaseFields: true,
-          syncMode: 'status-only',
-          transactionTimestamp: timestamp,
-        },
-      ).applications,
-      activityLog: ActivityLogService.mergeActivityEntries(currentData.activityLog, activityEntries),
-    };
-
-    await this.fileStorage.writeNormalizedData(updatedData);
-
-    return { updated: updatedCases, notFound };
   }
 
   /**
@@ -304,83 +373,38 @@ export class CaseBulkOperationsService {
    * console.log(`Marked ${result.updated.length} cases as priority`);
    */
   async updateCasesPriority(caseIds: string[], priority: boolean): Promise<{ updated: StoredCase[]; notFound: string[] }> {
-    if (caseIds.length === 0) {
-      return { updated: [], notFound: [] };
-    }
-
-    const currentData = await this.readCurrentDataOrThrow();
-
-    const idsToUpdate = new Set(caseIds);
-    const timestamp = new Date().toISOString();
-    const updatedCases: StoredCase[] = [];
-    const changedCaseIds: string[] = [];
-    const activityEntries: CaseActivityEntry[] = [];
-    const notFound: string[] = [];
-
-    // Track which IDs exist
-    const existingIds = this.getExistingCaseIds(currentData.cases);
-    notFound.push(...this.getNotFoundCaseIds(existingIds, caseIds));
-
-    // Update matching cases
-    const casesWithChanges = currentData.cases.map(c => {
-      if (!idsToUpdate.has(c.id)) {
-        return c;
-      }
-
-      const currentPriority = c.priority ?? false;
-      
-      // Skip if priority is already the same
+    return await this.performBulkCaseUpdate(caseIds, (caseItem, transactionTimestamp) => {
+      const currentPriority = caseItem.priority ?? false;
       if (currentPriority === priority) {
-        updatedCases.push(c);
-        return c;
+        return null;
       }
 
       const updatedCase: StoredCase = {
-        ...c,
+        ...caseItem,
         priority,
         caseRecord: {
-          ...c.caseRecord,
+          ...caseItem.caseRecord,
           priority,
-          updatedDate: timestamp,
+          updatedDate: transactionTimestamp,
         },
       };
 
-      updatedCases.push(updatedCase);
-  changedCaseIds.push(c.id);
-
-      // Create activity log entry
-      activityEntries.push({
-        id: uuidv4(),
-        timestamp,
-        caseId: c.id,
-        caseName: formatCaseDisplayName(c),
-        caseMcn: c.caseRecord?.mcn ?? c.mcn ?? null,
-        type: "priority-change",
-        payload: {
-          fromPriority: currentPriority,
-          toPriority: priority,
+      return {
+        updatedCase,
+        activityEntry: {
+          id: uuidv4(),
+          timestamp: transactionTimestamp,
+          caseId: caseItem.id,
+          caseName: formatCaseDisplayName(caseItem),
+          caseMcn: caseItem.caseRecord?.mcn ?? caseItem.mcn ?? null,
+          type: "priority-change",
+          payload: {
+            fromPriority: currentPriority,
+            toPriority: priority,
+          },
         },
-      });
-
-      return updatedCase;
+      };
     });
-
-    const casesWithTouchedTimestamps = this.touchUpdatedCases(
-      casesWithChanges,
-      changedCaseIds,
-      timestamp,
-    );
-
-    // Write updated data
-    const updatedData: NormalizedFileData = {
-      ...currentData,
-      cases: casesWithTouchedTimestamps,
-      activityLog: ActivityLogService.mergeActivityEntries(currentData.activityLog, activityEntries),
-    };
-
-    await this.fileStorage.writeNormalizedData(updatedData);
-
-    return { updated: updatedCases, notFound };
   }
 
   // =============================================================================

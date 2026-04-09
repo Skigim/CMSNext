@@ -87,6 +87,55 @@ function createLinkedRuntimeCase() {
   };
 }
 
+function createApplicantRef(personId: string) {
+  return { personId, role: "applicant" as const, isPrimary: true };
+}
+
+type StoredCaseOverrides = Partial<Omit<ReturnType<typeof createMockStoredCase>, "caseRecord">> & {
+  caseRecord?: Partial<ReturnType<typeof createMockStoredCase>["caseRecord"]>;
+};
+
+function createCaseWithPrimaryApplicant(
+  person: ReturnType<typeof createMockPerson>,
+  overrides: StoredCaseOverrides = {},
+) {
+  const { caseRecord: caseRecordOverrides, ...caseOverrides } = overrides;
+
+  return createMockStoredCase({
+    id: "case-1",
+    person,
+    people: [createApplicantRef(person.id)],
+    caseRecord: {
+      ...createMockStoredCase().caseRecord,
+      personId: person.id,
+      ...caseRecordOverrides,
+    },
+    ...caseOverrides,
+  });
+}
+
+function createPendingApplicationForCase(
+  applicantPersonId: string,
+  overrides: Partial<ReturnType<typeof createMockApplication>> = {},
+) {
+  return createMockApplication({
+    id: "application-1",
+    caseId: "case-1",
+    applicantPersonId,
+    status: "Pending",
+    statusHistory: [
+      {
+        id: "history-1",
+        status: "Pending",
+        effectiveDate: "2026-01-01",
+        changedAt: "2026-01-01T00:00:00.000Z",
+        source: "migration",
+      },
+    ],
+    ...overrides,
+  });
+}
+
 describe("CaseService hydration seam", () => {
   let caseService: CaseService;
   let mockFileService: MockAutosaveFileService;
@@ -155,14 +204,8 @@ describe("CaseService hydration seam", () => {
 
   it("fails to hydrate when a persisted case has no explicit primary ref", () => {
     const primaryPerson = createMockPerson({ id: "person-1" });
-    const storedCase = createMockStoredCase({
-      id: "case-1",
+    const storedCase = createCaseWithPrimaryApplicant(primaryPerson, {
       people: [{ personId: "person-1", role: "applicant", isPrimary: false }],
-      caseRecord: {
-        ...createMockStoredCase().caseRecord,
-        personId: "person-1",
-      },
-      person: primaryPerson,
     });
     const persistedCaseData = toPersistedCase(storedCase);
 
@@ -173,13 +216,11 @@ describe("CaseService hydration seam", () => {
 
   it("fails to hydrate when a referenced person is missing", () => {
     const primaryPerson = createMockPerson({ id: "person-1" });
-    const storedCase = createMockStoredCase({
-      id: "case-1",
+    const storedCase = createCaseWithPrimaryApplicant(primaryPerson, {
       people: [
         { personId: "person-1", role: "applicant", isPrimary: true },
         { personId: "person-2", role: "household_member", isPrimary: false },
       ],
-      person: primaryPerson,
     });
     const persistedCaseData = toPersistedCase(storedCase);
 
@@ -534,35 +575,15 @@ describe("CaseService hydration seam", () => {
         createMockPersistedNormalizedFileData({
           people: [primaryPerson, historicalApplicant],
           cases: [
-            createMockStoredCase({
-              id: "case-1",
+            createCaseWithPrimaryApplicant(primaryPerson, {
               status: "Pending",
-              person: primaryPerson,
-              people: [{ personId: "person-case-1", role: "applicant", isPrimary: true }],
+              people: [createApplicantRef("person-case-1")],
               caseRecord: {
-                ...createMockStoredCase().caseRecord,
-                personId: "person-case-1",
                 status: "Pending",
               },
             }),
           ],
-          applications: [
-            createMockApplication({
-              id: "application-1",
-              caseId: "case-1",
-              applicantPersonId: "person-historical-1",
-              status: "Pending",
-              statusHistory: [
-                {
-                  id: "history-1",
-                  status: "Pending",
-                  effectiveDate: "2026-01-01",
-                  changedAt: "2026-01-01T00:00:00.000Z",
-                  source: "migration",
-                },
-              ],
-            }),
-          ],
+          applications: [createPendingApplicationForCase("person-historical-1")],
         }),
       );
       vi.mocked(mockFileService.writeFile).mockResolvedValue(true);
@@ -649,14 +670,9 @@ describe("CaseService hydration seam", () => {
           }),
           people: [primaryPerson],
           cases: [
-            createMockStoredCase({
-              id: "case-1",
+            createCaseWithPrimaryApplicant(primaryPerson, {
               status: "Approved" as CaseStatus,
-              person: primaryPerson,
-              people: [{ personId: "person-case-1", role: "applicant", isPrimary: true }],
               caseRecord: {
-                ...createMockStoredCase().caseRecord,
-                personId: "person-case-1",
                 status: "Approved" as CaseStatus,
                 applicationDate: "1999-04-01",
                 applicationType: "Stale Legacy Type",
@@ -732,35 +748,14 @@ describe("CaseService hydration seam", () => {
         createMockPersistedNormalizedFileData({
           people: [createMockPerson({ id: "person-1" })],
           cases: [
-            createMockStoredCase({
-              id: "case-1",
+            createCaseWithPrimaryApplicant(createMockPerson({ id: "person-1" }), {
               status: "Pending",
-              person: createMockPerson({ id: "person-1" }),
-              people: [{ personId: "person-1", role: "applicant", isPrimary: true }],
               caseRecord: {
-                ...createMockStoredCase().caseRecord,
-                personId: "person-1",
                 status: "Pending",
               },
             }),
           ],
-          applications: [
-            createMockApplication({
-              id: "application-1",
-              caseId: "case-1",
-              applicantPersonId: "person-1",
-              status: "Pending",
-              statusHistory: [
-                {
-                  id: "history-1",
-                  status: "Pending",
-                  effectiveDate: "2026-01-01",
-                  changedAt: "2026-01-01T00:00:00.000Z",
-                  source: "migration",
-                },
-              ],
-            }),
-          ],
+          applications: [createPendingApplicationForCase("person-1")],
         }),
       );
       vi.mocked(mockFileService.writeFile).mockResolvedValue(true);
@@ -791,35 +786,14 @@ describe("CaseService hydration seam", () => {
         createMockPersistedNormalizedFileData({
           people: [createMockPerson({ id: "person-1" })],
           cases: [
-            createMockStoredCase({
-              id: "case-1",
+            createCaseWithPrimaryApplicant(createMockPerson({ id: "person-1" }), {
               status: "Pending",
-              person: createMockPerson({ id: "person-1" }),
-              people: [{ personId: "person-1", role: "applicant", isPrimary: true }],
               caseRecord: {
-                ...createMockStoredCase().caseRecord,
-                personId: "person-1",
                 status: "Pending",
               },
             }),
           ],
-          applications: [
-            createMockApplication({
-              id: "application-1",
-              caseId: "case-1",
-              applicantPersonId: "person-1",
-              status: "Pending",
-              statusHistory: [
-                {
-                  id: "history-1",
-                  status: "Pending",
-                  effectiveDate: "2026-01-01",
-                  changedAt: "2026-01-01T00:00:00.000Z",
-                  source: "migration",
-                },
-              ],
-            }),
-          ],
+          applications: [createPendingApplicationForCase("person-1")],
         }),
       );
 

@@ -1,6 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { FileStorageService, LegacyFormatError } from "@/utils/services/FileStorageService";
+import {
+  FileStorageService,
+  LegacyFormatError,
+  type NormalizedFileData,
+} from "@/utils/services/FileStorageService";
 import type { CategoryConfig } from "@/types/categoryConfig";
 import {
   createMockApplication,
@@ -32,6 +36,71 @@ describe("FileStorageService v2.1", () => {
       fileService: mockFileService as unknown as AutosaveFileService,
     });
   });
+
+  function createSingleApplicantStoredCase(
+    personOverrides: Parameters<typeof createMockPerson>[0],
+    caseOverrides: Parameters<typeof createMockStoredCase>[0] = {},
+  ) {
+    const person = createMockPerson(personOverrides);
+
+    return createMockStoredCase({
+      id: "case-1",
+      person,
+      people: [{ personId: person.id, role: "applicant", isPrimary: true }],
+      caseRecord: {
+        ...createMockStoredCase().caseRecord,
+        personId: person.id,
+        ...caseOverrides.caseRecord,
+      },
+      ...caseOverrides,
+    });
+  }
+
+  function expectHydratedSingleApplicantCase(
+    result: Awaited<ReturnType<FileStorageService["readFileData"]>>,
+    expectedPerson: { id: string; name: string },
+  ) {
+    expect(result?.version).toBe("2.1");
+    expect(result?.people).toHaveLength(1);
+    expect(result?.people[0].id).toBe(expectedPerson.id);
+    expect(result?.cases[0].person.name).toBe(expectedPerson.name);
+    expect(result?.cases[0].people).toEqual([
+      { personId: expectedPerson.id, role: "applicant", isPrimary: true },
+    ]);
+  }
+
+  function expectCanonicalCaseApplicationFields(
+    writtenRuntimeData: NormalizedFileData,
+    expectedFields: { applicationType: string; applicationDate?: string; retroRequested?: string },
+  ) {
+    expect(writtenRuntimeData.cases[0].caseRecord.applicationType).toBe(expectedFields.applicationType);
+
+    if (expectedFields.applicationDate) {
+      expect(writtenRuntimeData.cases[0].caseRecord.applicationDate).toBe(expectedFields.applicationDate);
+    }
+
+    if (expectedFields.retroRequested) {
+      expect(writtenRuntimeData.cases[0].caseRecord.retroRequested).toBe(expectedFields.retroRequested);
+    }
+  }
+
+  function createSingleApplicantRuntimeData(
+    overrides: Partial<NormalizedFileData> = {},
+  ) {
+    const person = createMockPerson({ id: "person-1" });
+
+    return createMockNormalizedFileData({
+      people: [person],
+      cases: [
+        createMockStoredCase({
+          id: "case-1",
+          person,
+          people: [{ personId: "person-1", role: "applicant", isPrimary: true }],
+        }),
+      ],
+      ...overrides,
+    });
+  }
 
   it("rejects persisted v2.0 files during normal runtime reads", async () => {
     // ARRANGE
@@ -75,8 +144,8 @@ describe("FileStorageService v2.1", () => {
 
   it("hydrates persisted v2.1 data on read without rewriting it", async () => {
     // ARRANGE
-    const hydratedPerson = {
-      ...createMockPerson({
+    const hydratedCase = createSingleApplicantStoredCase(
+      {
         id: "person-1",
         firstName: "Hydrated",
         lastName: "Person",
@@ -84,27 +153,17 @@ describe("FileStorageService v2.1", () => {
         createdAt: "2026-01-01T00:00:00.000Z",
         updatedAt: "2026-01-02T00:00:00.000Z",
         dateAdded: "2026-01-01T00:00:00.000Z",
-      }),
-      familyMemberIds: [],
-      relationships: [],
-    };
+      },
+      {
+        name: "Hydrated Person",
+        mcn: "MCN123456",
+        createdAt: "2026-01-01T00:00:00.000Z",
+        updatedAt: "2026-01-02T00:00:00.000Z",
+      },
+    );
     mockFileService.readFile.mockResolvedValue(createMockPersistedNormalizedFileData({
-      people: [hydratedPerson],
-      cases: [
-        createMockStoredCase({
-          id: "case-1",
-          name: "Hydrated Person",
-          mcn: "MCN123456",
-          createdAt: "2026-01-01T00:00:00.000Z",
-          updatedAt: "2026-01-02T00:00:00.000Z",
-          person: hydratedPerson,
-          people: [{ personId: "person-1", role: "applicant", isPrimary: true }],
-          caseRecord: {
-            ...createMockStoredCase().caseRecord,
-            personId: "person-1",
-          },
-        }),
-      ],
+      people: [hydratedCase.person],
+      cases: [hydratedCase],
       exported_at: "2026-03-01T00:00:00.000Z",
       total_cases: 1,
     }));
@@ -113,9 +172,10 @@ describe("FileStorageService v2.1", () => {
     const result = await fileStorage.readFileData();
 
     // ASSERT
-    expect(result?.version).toBe("2.1");
-    expect(result?.people).toHaveLength(1);
-    expect(result?.cases[0].person.name).toBe("Hydrated Person");
+    expectHydratedSingleApplicantCase(result, {
+      id: "person-1",
+      name: "Hydrated Person",
+    });
     expect(result?.cases[0].linkedPeople).toEqual([
       {
         person: expect.objectContaining({
@@ -218,9 +278,8 @@ describe("FileStorageService v2.1", () => {
     const migratedPersistedData = migrateV20ToV21({
       ...createMockNormalizedFileDataV20(),
       cases: [
-        createMockStoredCase({
-          id: "case-1",
-          person: createMockPerson({
+        createSingleApplicantStoredCase(
+          {
             id: "person-1",
             firstName: "Migrated",
             lastName: "Workspace",
@@ -228,9 +287,11 @@ describe("FileStorageService v2.1", () => {
             relationships: undefined,
             createdAt: "2026-01-01T00:00:00.000Z",
             updatedAt: undefined,
-          }),
-          people: undefined,
-        }),
+          },
+          {
+            people: undefined,
+          },
+        ),
       ],
       exported_at: "2026-03-01T00:00:00.000Z",
       total_cases: 1,
@@ -241,13 +302,10 @@ describe("FileStorageService v2.1", () => {
     const result = await fileStorage.readFileData();
 
     // ASSERT
-    expect(result?.version).toBe("2.1");
-    expect(result?.people).toHaveLength(1);
-    expect(result?.people[0].id).toBe("person-1");
-    expect(result?.cases[0].person.name).toBe("Migrated Workspace");
-    expect(result?.cases[0].people).toEqual([
-      { personId: "person-1", role: "applicant", isPrimary: true },
-    ]);
+    expectHydratedSingleApplicantCase(result, {
+      id: "person-1",
+      name: "Migrated Workspace",
+    });
     expect(mockFileService.writeFile).toHaveBeenCalledTimes(1);
   });
 
@@ -303,8 +361,10 @@ describe("FileStorageService v2.1", () => {
     const writtenRuntimeData = await fileStorage.writeNormalizedData(persistedData);
 
     // ASSERT
-    expect(writtenRuntimeData.cases[0].caseRecord.applicationType).toBe("Older Terminal");
-    expect(writtenRuntimeData.cases[0].caseRecord.applicationDate).toBe("2026-01-01");
+    expectCanonicalCaseApplicationFields(writtenRuntimeData, {
+      applicationType: "Older Terminal",
+      applicationDate: "2026-01-01",
+    });
   });
 
   it("dehydrates runtime data to root people plus case refs on write", async () => {
@@ -373,15 +433,7 @@ describe("FileStorageService v2.1", () => {
 
   it("preserves explicit applications on write and rehydrates legacy case fields from them", async () => {
     // ARRANGE
-    const runtimeData = createMockNormalizedFileData({
-      people: [createMockPerson({ id: "person-1" })],
-      cases: [
-        createMockStoredCase({
-          id: "case-1",
-          person: createMockPerson({ id: "person-1" }),
-          people: [{ personId: "person-1", role: "applicant", isPrimary: true }],
-        }),
-      ],
+      const runtimeData = createSingleApplicantRuntimeData({
       applications: [
         createMockApplication({
           id: "application-1",
@@ -400,8 +452,10 @@ describe("FileStorageService v2.1", () => {
 
     // ASSERT
     expect(writtenRuntimeData.applications).toHaveLength(1);
-    expect(writtenRuntimeData.cases[0].caseRecord.applicationType).toBe("Renewal");
-    expect(writtenRuntimeData.cases[0].caseRecord.retroRequested).toBe("2026-02-01");
+    expectCanonicalCaseApplicationFields(writtenRuntimeData, {
+      applicationType: "Renewal",
+      retroRequested: "2026-02-01",
+    });
 
     // Verify persists both the explicit application and the hydrated case legacy field
     expect(mockFileService.writeFile).toHaveBeenCalledTimes(1);

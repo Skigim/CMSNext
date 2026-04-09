@@ -17,6 +17,38 @@ function selectApplication(
   return selectOldestNonTerminalApplication(applications, completionStatuses);
 }
 
+function expectSelectedApplicationId(
+  applications: ReturnType<typeof createMockApplication>[],
+  expectedId: string | null,
+) {
+  expect(selectApplication(applications)?.id ?? null).toBe(expectedId);
+}
+
+function createCreatedAtFallbackApplications(
+  applicationDateValues: [string, string, string],
+) {
+  return [
+    createMockApplication({
+      id: "application-a-created-later",
+      applicationDate: applicationDateValues[0],
+      createdAt: "2026-02-03T00:00:00.000Z",
+      status: "Pending",
+    }),
+    createMockApplication({
+      id: "application-z-created-earlier",
+      applicationDate: applicationDateValues[1],
+      createdAt: "2026-02-02T00:00:00.000Z",
+      status: "Pending",
+    }),
+    createMockApplication({
+      id: "application-y-created-earlier",
+      applicationDate: applicationDateValues[2],
+      createdAt: "2026-02-02T00:00:00.000Z",
+      status: "Pending",
+    }),
+  ];
+}
+
 describe("selectOldestNonTerminalApplication", () => {
   it("selects the oldest non-terminal application by application date", () => {
     // Arrange
@@ -47,32 +79,14 @@ describe("selectOldestNonTerminalApplication", () => {
 
   it("uses createdAt then id as deterministic fallbacks when application dates tie", () => {
     // Arrange
-    const applications = [
-      createMockApplication({
-        id: "application-a-created-later",
-        applicationDate: "2026-02-01",
-        createdAt: "2026-02-03T00:00:00.000Z",
-        status: "Pending",
-      }),
-      createMockApplication({
-        id: "application-z-created-earlier",
-        applicationDate: "2026-02-01",
-        createdAt: "2026-02-02T00:00:00.000Z",
-        status: "Pending",
-      }),
-      createMockApplication({
-        id: "application-y-created-earlier",
-        applicationDate: "2026-02-01",
-        createdAt: "2026-02-02T00:00:00.000Z",
-        status: "Pending",
-      }),
-    ];
+    const applications = createCreatedAtFallbackApplications([
+      "2026-02-01",
+      "2026-02-01",
+      "2026-02-01",
+    ]);
 
-    // Act
-    const result = selectApplication(applications);
-
-    // Assert
-    expect(result?.id).toBe("application-y-created-earlier");
+    // Act & Assert
+    expectSelectedApplicationId(applications, "application-y-created-earlier");
   });
 
   it("prefers a valid application date over blank or invalid application dates", () => {
@@ -107,32 +121,14 @@ describe("selectOldestNonTerminalApplication", () => {
 
   it("falls back to createdAt then id when application dates are blank or invalid", () => {
     // Arrange
-    const applications = [
-      createMockApplication({
-        id: "application-a-created-later",
-        applicationDate: "",
-        createdAt: "2026-02-03T00:00:00.000Z",
-        status: "Pending",
-      }),
-      createMockApplication({
-        id: "application-z-created-earlier",
-        applicationDate: "not-a-date",
-        createdAt: "2026-02-02T00:00:00.000Z",
-        status: "Pending",
-      }),
-      createMockApplication({
-        id: "application-y-created-earlier",
-        applicationDate: "",
-        createdAt: "2026-02-02T00:00:00.000Z",
-        status: "Pending",
-      }),
-    ];
+    const applications = createCreatedAtFallbackApplications([
+      "",
+      "not-a-date",
+      "",
+    ]);
 
-    // Act
-    const result = selectApplication(applications);
-
-    // Assert
-    expect(result?.id).toBe("application-y-created-earlier");
+    // Act & Assert
+    expectSelectedApplicationId(applications, "application-y-created-earlier");
   });
 
   it("returns null when every application is terminal", () => {
@@ -151,10 +147,7 @@ describe("selectOldestNonTerminalApplication", () => {
     ];
 
     // Act
-    const result = selectApplication(applications);
-
-    // Assert
-    expect(result).toBeNull();
+    expectSelectedApplicationId(applications, null);
   });
 });
 

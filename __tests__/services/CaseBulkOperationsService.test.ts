@@ -82,6 +82,115 @@ describe('CaseBulkOperationsService', () => {
       ...overrides,
     });
 
+  function createApplicantRef(personId: string) {
+    return { personId, role: 'applicant' as const, isPrimary: true };
+  }
+
+  function createCompletedStatusConfig(): CategoryConfig {
+    return {
+      ...defaultCategoryConfig,
+      caseStatuses: [
+        { name: 'Approved', colorSlot: 'green', countsAsCompleted: true },
+        { name: 'Denied', colorSlot: 'red', countsAsCompleted: true },
+        { name: 'Pending', colorSlot: 'amber', countsAsCompleted: false },
+      ],
+    };
+  }
+
+  function createCanonicalStatusSyncData(primaryPersonId = 'person-1') {
+    const baseCase = createMockCase('case-1', 'Approved' as CaseStatus);
+    const data = createEmptyNormalizedData({
+      categoryConfig: createCompletedStatusConfig(),
+      people: [
+        {
+          ...createMockStoredCase({ person: undefined as never }).person,
+          id: primaryPersonId,
+          familyMembers: [],
+          familyMemberIds: [],
+          legacyFamilyMemberNames: [],
+          normalizedRelationships: [],
+        },
+      ],
+      cases: [
+        {
+          ...baseCase,
+          person: { ...baseCase.person, id: primaryPersonId },
+          linkedPeople: [{ ref: createApplicantRef(primaryPersonId), person: { ...baseCase.person, id: primaryPersonId } }],
+          people: [createApplicantRef(primaryPersonId)],
+          caseRecord: {
+            ...baseCase.caseRecord,
+            personId: primaryPersonId,
+          },
+        },
+      ],
+      applications: [
+        createMockApplication({
+          id: 'application-1',
+          caseId: 'case-1',
+          applicantPersonId: primaryPersonId,
+          applicationDate: '2026-01-01',
+          applicationType: 'Renewal',
+          status: 'Approved',
+          hasWaiver: true,
+          retroRequestedAt: '2025-12-01',
+          retroMonths: ['2025-12'],
+          verification: {
+            isAppValidated: true,
+            isAgedDisabledVerified: true,
+            isCitizenshipVerified: true,
+            isResidencyVerified: true,
+            avsConsentDate: '2026-01-02',
+            voterFormStatus: 'requested',
+            isIntakeCompleted: false,
+          },
+          statusHistory: [
+            {
+              id: 'history-1',
+              status: 'Approved',
+              effectiveDate: '2026-01-01',
+              changedAt: '2026-01-01T00:00:00.000Z',
+              source: 'migration',
+            },
+          ],
+          updatedAt: '2026-01-15T00:00:00.000Z',
+        }),
+      ],
+    });
+
+    return data;
+  }
+
+  async function expectEmptyBatchResult<T>(
+    action: () => Promise<T>,
+    expectedResult: T,
+  ) {
+    const result = await action();
+    expect(result).toEqual(expectedResult);
+    expect(mockFileStorage.readFileData).not.toHaveBeenCalled();
+  }
+
+  async function expectMissingDataError(action: () => Promise<unknown>) {
+    mockFileStorage.setData(null);
+    await expect(action()).rejects.toThrow('Failed to read current data');
+  }
+
+  function expectNoOpCaseUpdate(
+    writtenData: NormalizedFileData,
+    expectedUpdatedAt: string,
+  ) {
+    expect(mockFileStorage.writeNormalizedData).toHaveBeenCalledWith(
+      expect.objectContaining({
+        activityLog: [],
+      }),
+    );
+    expect(mockFileStorage.touchCaseTimestamps).toHaveBeenCalledWith(
+      expect.any(Array),
+      [],
+      expect.any(String),
+    );
+    expect(writtenData.cases[0].updatedAt).toBe(expectedUpdatedAt);
+  }
+
   beforeEach(() => {
     mockFileStorage = createMockFileStorage();
     service = new CaseBulkOperationsService({
@@ -95,14 +204,14 @@ describe('CaseBulkOperationsService', () => {
 
   describe('deleteCases', () => {
     it('should return early with empty result when given empty array', async () => {
-      const result = await service.deleteCases([]);
-      expect(result).toEqual({ deleted: 0, notFound: [] });
-      expect(mockFileStorage.readFileData).not.toHaveBeenCalled();
+      await expectEmptyBatchResult(() => service.deleteCases([]), {
+        deleted: 0,
+        notFound: [],
+      });
     });
 
     it('should throw error when no data exists', async () => {
-      mockFileStorage.setData(null);
-      await expect(service.deleteCases(['case-1'])).rejects.toThrow('Failed to read current data');
+      await expectMissingDataError(() => service.deleteCases(['case-1']));
     });
 
     it('should delete single case and associated data', async () => {
@@ -183,14 +292,14 @@ describe('CaseBulkOperationsService', () => {
 
   describe('updateCasesStatus', () => {
     it('should return early with empty result when given empty array', async () => {
-      const result = await service.updateCasesStatus([], 'Active');
-      expect(result).toEqual({ updated: [], notFound: [] });
-      expect(mockFileStorage.readFileData).not.toHaveBeenCalled();
+      await expectEmptyBatchResult(() => service.updateCasesStatus([], 'Active'), {
+        updated: [],
+        notFound: [],
+      });
     });
 
     it('should throw error when no data exists', async () => {
-      mockFileStorage.setData(null);
-      await expect(service.updateCasesStatus(['case-1'], 'Active')).rejects.toThrow('Failed to read current data');
+      await expectMissingDataError(() => service.updateCasesStatus(['case-1'], 'Active'));
     });
 
     it('should update status for single case', async () => {
@@ -244,19 +353,8 @@ describe('CaseBulkOperationsService', () => {
 
       expect(result.updated).toHaveLength(1);
       expect(result.updated[0].status).toBe('Active');
-      // Activity log should not contain entry for unchanged case
-      expect(mockFileStorage.writeNormalizedData).toHaveBeenCalledWith(
-        expect.objectContaining({
-          activityLog: [],
-        })
-      );
-      expect(mockFileStorage.touchCaseTimestamps).toHaveBeenCalledWith(
-        expect.any(Array),
-        [],
-        expect.any(String),
-      );
       const writtenData = mockFileStorage.writeNormalizedData.mock.calls[0][0] as NormalizedFileData;
-      expect(writtenData.cases[0].updatedAt).toBe('2026-01-01T00:00:00.000Z');
+      expectNoOpCaseUpdate(writtenData, '2026-01-01T00:00:00.000Z');
     });
 
     it('should track not found case IDs', async () => {
@@ -272,70 +370,7 @@ describe('CaseBulkOperationsService', () => {
 
     it('should sync canonical application status history with the bulk transaction timestamp', async () => {
       // Arrange
-      const primaryPersonId = 'person-1';
-      const data = createEmptyNormalizedData();
-      data.categoryConfig = {
-        ...defaultCategoryConfig,
-        caseStatuses: [
-          { name: 'Approved', colorSlot: 'green', countsAsCompleted: true },
-          { name: 'Denied', colorSlot: 'red', countsAsCompleted: true },
-          { name: 'Pending', colorSlot: 'amber', countsAsCompleted: false },
-        ],
-      };
-      data.people = [
-        {
-          ...createMockStoredCase({ person: undefined as never }).person,
-          id: primaryPersonId,
-          familyMembers: [],
-          familyMemberIds: [],
-          legacyFamilyMemberNames: [],
-          normalizedRelationships: [],
-        },
-      ];
-      data.cases = [
-        createMockCase('case-1', 'Approved' as CaseStatus),
-      ].map((caseItem) => ({
-        ...caseItem,
-        person: { ...caseItem.person, id: primaryPersonId },
-        linkedPeople: [{ ref: { personId: primaryPersonId, role: 'applicant', isPrimary: true }, person: { ...caseItem.person, id: primaryPersonId } }],
-        people: [{ personId: primaryPersonId, role: 'applicant', isPrimary: true }],
-        caseRecord: {
-          ...caseItem.caseRecord,
-          personId: primaryPersonId,
-        },
-      }));
-      data.applications = [
-        createMockApplication({
-          id: 'application-1',
-          caseId: 'case-1',
-          applicantPersonId: primaryPersonId,
-          applicationDate: '2026-01-01',
-          applicationType: 'Renewal',
-          status: 'Approved',
-          hasWaiver: true,
-          retroRequestedAt: '2025-12-01',
-          retroMonths: ['2025-12'],
-          verification: {
-            isAppValidated: true,
-            isAgedDisabledVerified: true,
-            isCitizenshipVerified: true,
-            isResidencyVerified: true,
-            avsConsentDate: '2026-01-02',
-            voterFormStatus: 'requested',
-            isIntakeCompleted: false,
-          },
-          statusHistory: [
-            {
-              id: 'history-1',
-              status: 'Approved',
-              effectiveDate: '2026-01-01',
-              changedAt: '2026-01-01T00:00:00.000Z',
-              source: 'migration',
-            },
-          ],
-          updatedAt: '2026-01-15T00:00:00.000Z',
-        }),
-      ];
+      const data = createCanonicalStatusSyncData();
       mockFileStorage.setData(data);
 
       mockFileStorage.touchCaseTimestamps.mockImplementation(
@@ -401,14 +436,14 @@ describe('CaseBulkOperationsService', () => {
 
   describe('updateCasesPriority', () => {
     it('should return early with empty result when given empty array', async () => {
-      const result = await service.updateCasesPriority([], true);
-      expect(result).toEqual({ updated: [], notFound: [] });
-      expect(mockFileStorage.readFileData).not.toHaveBeenCalled();
+      await expectEmptyBatchResult(() => service.updateCasesPriority([], true), {
+        updated: [],
+        notFound: [],
+      });
     });
 
     it('should throw error when no data exists', async () => {
-      mockFileStorage.setData(null);
-      await expect(service.updateCasesPriority(['case-1'], true)).rejects.toThrow('Failed to read current data');
+      await expectMissingDataError(() => service.updateCasesPriority(['case-1'], true));
     });
 
     it('should update priority for single case', async () => {
@@ -463,18 +498,8 @@ describe('CaseBulkOperationsService', () => {
       const result = await service.updateCasesPriority(['case-1'], true);
 
       expect(result.updated).toHaveLength(1);
-      expect(mockFileStorage.writeNormalizedData).toHaveBeenCalledWith(
-        expect.objectContaining({
-          activityLog: [],
-        })
-      );
-      expect(mockFileStorage.touchCaseTimestamps).toHaveBeenCalledWith(
-        expect.any(Array),
-        [],
-        expect.any(String),
-      );
       const writtenData = mockFileStorage.writeNormalizedData.mock.calls[0][0] as NormalizedFileData;
-      expect(writtenData.cases[0].updatedAt).toBe('2026-01-01T00:00:00.000Z');
+      expectNoOpCaseUpdate(writtenData, '2026-01-01T00:00:00.000Z');
     });
 
     it('should track not found case IDs', async () => {
@@ -495,8 +520,7 @@ describe('CaseBulkOperationsService', () => {
 
   describe('importCases', () => {
     it('should throw error when no data exists', async () => {
-      mockFileStorage.setData(null);
-      await expect(service.importCases([createMockCase('case-1')])).rejects.toThrow('Failed to read current data');
+      await expectMissingDataError(() => service.importCases([createMockCase('case-1')]));
     });
 
     it('should import single case', async () => {

@@ -109,6 +109,41 @@ export class ApplicationService {
     };
   }
 
+  private replaceApplicationAtIndex(
+    applications: Application[],
+    applicationIndex: number,
+    updatedApplication: Application,
+  ): Application[] {
+    return applications.map((application, index) =>
+      index === applicationIndex ? updatedApplication : cloneApplication(application),
+    );
+  }
+
+  private async writeApplicationUpdate(params: {
+    currentData: NonNullable<Awaited<ReturnType<ApplicationFileStorage["readFileData"]>>>;
+    targetCase: NonNullable<Awaited<ReturnType<typeof readDataAndFindCase>>["targetCase"]>;
+    caseId: string;
+    updatedApplications: Application[];
+    activityEntries: CaseActivityEntry[];
+    timestamp: string;
+  }): Promise<void> {
+    const updatedCases = this.fileStorage.touchCaseTimestamps(
+      params.currentData.cases,
+      [params.caseId],
+      params.timestamp,
+    );
+
+    await this.fileStorage.writeNormalizedData({
+      ...params.currentData,
+      cases: updatedCases,
+      applications: params.updatedApplications,
+      activityLog: ActivityLogService.mergeActivityEntries(
+        params.currentData.activityLog,
+        params.activityEntries,
+      ),
+    });
+  }
+
   async getApplicationsForCase(caseId: string): Promise<Application[]> {
     const data = await readDataAndRequireCase(this.fileStorage, caseId);
 
@@ -194,14 +229,10 @@ export class ApplicationService {
       updatedAt: timestamp,
     };
 
-    const updatedApplications = applications.map((application, index) =>
-      index === applicationIndex ? updatedApplication : cloneApplication(application),
-    );
-
-    const updatedCases = this.fileStorage.touchCaseTimestamps(
-      currentData.cases,
-      [caseId],
-      timestamp,
+    const updatedApplications = this.replaceApplicationAtIndex(
+      applications,
+      applicationIndex,
+      updatedApplication,
     );
     const changedFields = getChangedApplicationFields(existingApplication, updatedApplication);
     const activityEntries: CaseActivityEntry[] =
@@ -222,11 +253,13 @@ export class ApplicationService {
             },
           ];
 
-    await this.fileStorage.writeNormalizedData({
-      ...currentData,
-      cases: updatedCases,
-      applications: updatedApplications,
-      activityLog: ActivityLogService.mergeActivityEntries(currentData.activityLog, activityEntries),
+    await this.writeApplicationUpdate({
+      currentData,
+      targetCase,
+      caseId,
+      updatedApplications,
+      activityEntries,
+      timestamp,
     });
 
     return cloneApplication(updatedApplication);
@@ -256,14 +289,10 @@ export class ApplicationService {
       updatedAt: timestamp,
     };
 
-    const updatedApplications = applications.map((application, index) =>
-      index === applicationIndex ? updatedApplication : cloneApplication(application),
-    );
-
-    const updatedCases = this.fileStorage.touchCaseTimestamps(
-      currentData.cases,
-      [caseId],
-      timestamp,
+    const updatedApplications = this.replaceApplicationAtIndex(
+      applications,
+      applicationIndex,
+      updatedApplication,
     );
     const activityEntry: CaseActivityEntry = {
       id: uuidv4(),
@@ -281,11 +310,13 @@ export class ApplicationService {
       },
     };
 
-    await this.fileStorage.writeNormalizedData({
-      ...currentData,
-      cases: updatedCases,
-      applications: updatedApplications,
-      activityLog: ActivityLogService.mergeActivityEntries(currentData.activityLog, [activityEntry]),
+    await this.writeApplicationUpdate({
+      currentData,
+      targetCase,
+      caseId,
+      updatedApplications,
+      activityEntries: [activityEntry],
+      timestamp,
     });
 
     return cloneApplication(updatedApplication);
