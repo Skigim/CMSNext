@@ -478,6 +478,8 @@ const VOTER_STATUS_LABELS: Record<VoterFormStatus, string> = {
   "": "Not Set",
 };
 
+const CASE_EDIT_APPLICATION_FIELDS_DISABLED = true;
+
 export function CaseIdentificationSection({
   caseData,
   isEditing,
@@ -541,7 +543,7 @@ export function CaseIdentificationSection({
             <div className="space-y-1">
               <Label htmlFor="caseType" className="text-xs">Case Type</Label>
               <Select value={caseData.caseType} onValueChange={(value) => onCaseDataChange("caseType", value)}>
-                <SelectTrigger className="h-8">
+                <SelectTrigger id="caseType" aria-label="Case Type" className="h-8">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -555,9 +557,10 @@ export function CaseIdentificationSection({
               <Label htmlFor="applicationType" className="text-xs">App Type</Label>
               <Select
                 value={caseData.applicationType || ""}
+                disabled={CASE_EDIT_APPLICATION_FIELDS_DISABLED}
                 onValueChange={(value) => onCaseDataChange("applicationType", value || undefined)}
               >
-                <SelectTrigger className="h-8">
+                <SelectTrigger id="applicationType" className="h-8">
                   <SelectValue placeholder="Select type" />
                 </SelectTrigger>
                 <SelectContent>
@@ -572,6 +575,7 @@ export function CaseIdentificationSection({
               <Input
                 id="applicationDate"
                 type="date"
+                disabled={CASE_EDIT_APPLICATION_FIELDS_DISABLED}
                 value={isoToDateInputValue(caseData.applicationDate)}
                 onChange={(e) => onCaseDataChange("applicationDate", dateInputValueToISO(e.target.value) || "")}
                 className="h-8"
@@ -579,8 +583,12 @@ export function CaseIdentificationSection({
             </div>
             <div className="space-y-1">
               <Label htmlFor="status" className="text-xs">Status</Label>
-              <Select value={caseData.status} onValueChange={(value) => onCaseDataChange("status", value)}>
-                <SelectTrigger className="h-8">
+              <Select
+                value={caseData.status}
+                disabled={CASE_EDIT_APPLICATION_FIELDS_DISABLED}
+                onValueChange={(value) => onCaseDataChange("status", value)}
+              >
+                <SelectTrigger id="status" className="h-8">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -595,6 +603,7 @@ export function CaseIdentificationSection({
               <Input
                 id="avsConsentDate"
                 type="date"
+                disabled={CASE_EDIT_APPLICATION_FIELDS_DISABLED}
                 value={isoToDateInputValue(caseData.avsConsentDate ?? "")}
                 onChange={(e) => onCaseDataChange("avsConsentDate", dateInputValueToISO(e.target.value) || "")}
                 className="h-8"
@@ -614,11 +623,12 @@ export function CaseIdentificationSection({
               <Label htmlFor="voterFormStatus" className="text-xs">Voter Form</Label>
               <Select
                 value={caseData.voterFormStatus || "none"}
+                disabled={CASE_EDIT_APPLICATION_FIELDS_DISABLED}
                 onValueChange={(value) =>
                   onCaseDataChange("voterFormStatus", value === "none" ? "" : (value as VoterFormStatus))
                 }
               >
-                <SelectTrigger className="h-8">
+                <SelectTrigger id="voterFormStatus" className="h-8">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -693,6 +703,7 @@ export function EligibilityDetailsSection({
                 <div className="flex items-center space-x-2">
                   <Checkbox
                     id="citizenshipVerified"
+                    disabled={CASE_EDIT_APPLICATION_FIELDS_DISABLED}
                     checked={caseData.citizenshipVerified ?? false}
                     onCheckedChange={(checked) => onCaseDataChange("citizenshipVerified", checked)}
                   />
@@ -701,6 +712,7 @@ export function EligibilityDetailsSection({
                 <div className="flex items-center space-x-2">
                   <Checkbox
                     id="residencyVerified"
+                    disabled={CASE_EDIT_APPLICATION_FIELDS_DISABLED}
                     checked={caseData.residencyVerified ?? false}
                     onCheckedChange={(checked) => onCaseDataChange("residencyVerified", checked)}
                   />
@@ -709,6 +721,7 @@ export function EligibilityDetailsSection({
                 <div className="flex items-center space-x-2">
                   <Checkbox
                     id="agedDisabledVerified"
+                    disabled={CASE_EDIT_APPLICATION_FIELDS_DISABLED}
                     checked={caseData.agedDisabledVerified ?? false}
                     onCheckedChange={(checked) => onCaseDataChange("agedDisabledVerified", checked)}
                   />
@@ -732,6 +745,7 @@ export function EligibilityDetailsSection({
                 <div className="flex items-center space-x-2">
                   <Checkbox
                     id="appValidated"
+                    disabled={CASE_EDIT_APPLICATION_FIELDS_DISABLED}
                     checked={caseData.appValidated ?? false}
                     onCheckedChange={(checked) => onCaseDataChange("appValidated", checked)}
                   />
@@ -753,11 +767,12 @@ export function EligibilityDetailsSection({
             {/* Living Arrangement */}
             <div className="space-y-2">
               <h4 className="text-sm font-medium text-muted-foreground">Living Arrangement</h4>
+              <Label htmlFor="livingArrangement" className="sr-only">Living Arrangement</Label>
               <Select
                 value={personData.livingArrangement}
                 onValueChange={(value) => onPersonDataChange("livingArrangement", value)}
               >
-                <SelectTrigger className="h-8">
+                <SelectTrigger id="livingArrangement" aria-label="Living Arrangement" className="h-8">
                   <SelectValue placeholder="Select arrangement" />
                 </SelectTrigger>
                 <SelectContent>
@@ -840,6 +855,7 @@ export function CaseFlagsSection({
             <div className="flex items-center space-x-2">
               <Checkbox
                 id="withWaiver"
+                disabled={CASE_EDIT_APPLICATION_FIELDS_DISABLED}
                 checked={caseData.withWaiver ?? false}
                 onCheckedChange={(checked) => onCaseDataChange("withWaiver", checked)}
               />
@@ -848,6 +864,7 @@ export function CaseFlagsSection({
             <div className="flex items-center space-x-2">
               <Checkbox
                 id="retroRequested"
+                disabled={CASE_EDIT_APPLICATION_FIELDS_DISABLED}
                 checked={retroRequested}
                 onCheckedChange={(checked) => onRetroRequestedChange(checked === true)}
               />
@@ -858,6 +875,7 @@ export function CaseFlagsSection({
                 <Label htmlFor="retroMonthsInput" className="text-xs">Retro Months</Label>
                 <Input
                   id="retroMonthsInput"
+                  disabled={CASE_EDIT_APPLICATION_FIELDS_DISABLED}
                   value={(caseData.retroMonths ?? []).join(", ")}
                   onChange={(e) => {
                     const value = e.target.value;

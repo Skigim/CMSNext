@@ -42,8 +42,10 @@ const getTodayDate = () => toLocalDateString();
  * 
  * All other fields use defaults and can be edited later via CaseIntakeScreen.
  */
-export function QuickCaseModal({ isOpen, onClose, onSave }: QuickCaseModalProps) {
+export function QuickCaseModal({ isOpen, onClose, onSave }: Readonly<QuickCaseModalProps>) {
   const { config } = useCategoryConfig();
+  const isMountedRef = useRef(true);
+  const focusTimeoutRef = useRef<ReturnType<typeof globalThis.setTimeout> | null>(null);
 
   // Defaults from config
   const defaultCaseType = useMemo(() => config.caseTypes[0] ?? "", [config.caseTypes]);
@@ -66,6 +68,15 @@ export function QuickCaseModal({ isOpen, onClose, onSave }: QuickCaseModalProps)
 
   // Ref for first name input to focus after reset
   const firstNameRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+      if (focusTimeoutRef.current !== null) {
+        globalThis.clearTimeout(focusTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // Reset addAnother when modal opens
   useEffect(() => {
@@ -137,7 +148,9 @@ export function QuickCaseModal({ isOpen, onClose, onSave }: QuickCaseModalProps)
         // Reset form for another case entry
         resetForm();
         // Focus first name input for faster data entry
-        setTimeout(() => firstNameRef.current?.focus(), 0);
+        focusTimeoutRef.current = globalThis.setTimeout(() => {
+          firstNameRef.current?.focus();
+        }, 0);
       } else {
         handleClose();
       }
@@ -147,7 +160,9 @@ export function QuickCaseModal({ isOpen, onClose, onSave }: QuickCaseModalProps)
         { id: toastId }
       );
     } finally {
-      setIsSaving(false);
+      if (isMountedRef.current) {
+        setIsSaving(false);
+      }
     }
   }, [
     isFormValid,
@@ -169,15 +184,15 @@ export function QuickCaseModal({ isOpen, onClose, onSave }: QuickCaseModalProps)
     void submitCase();
   }, [submitCase]);
 
-  const handleSubmitShortcut = useSubmitShortcut<HTMLFormElement>({
+  const handleSubmitShortcut = useSubmitShortcut<HTMLDivElement>({
     onSubmit: submitCase,
     canSubmit: isFormValid && !isSaving,
   });
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
-      <DialogContent className="sm:max-w-md">
-        <form onSubmit={handleSubmit} onKeyDown={handleSubmitShortcut}>
+      <DialogContent className="sm:max-w-md" onKeyDown={handleSubmitShortcut}>
+        <form onSubmit={handleSubmit}>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Plus className="h-5 w-5" />

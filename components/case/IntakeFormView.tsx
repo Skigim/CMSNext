@@ -92,9 +92,9 @@ import type { HouseholdMemberData, Person, Relationship } from "@/types/case";
 const STEP_FOCUSABLE_SELECTOR = [
   'input:not([type="hidden"]):not([disabled])',
   'textarea:not([disabled])',
-  '[role="combobox"]:not([aria-disabled="true"])',
-  '[role="checkbox"]:not([aria-disabled="true"])',
-  '[role="radio"]:not([aria-disabled="true"])',
+  '[role="combobox"]:not([disabled]):not([aria-disabled="true"])',
+  '[role="checkbox"]:not([disabled]):not([aria-disabled="true"])',
+  '[role="radio"]:not([disabled]):not([aria-disabled="true"])',
 ].join(", ");
 
 // ============================================================================
@@ -832,6 +832,7 @@ function ContactStep({ formData, onChange }: Readonly<ContactStepProps>) {
 // --- Step 2: Case Details ---
 interface CaseDetailsStepProps {
   formData: IntakeFormData;
+  areApplicationFieldsDisabled: boolean;
   onChange: <K extends keyof IntakeFormData>(
     field: K,
     value: IntakeFormData[K],
@@ -840,6 +841,7 @@ interface CaseDetailsStepProps {
 
 function CaseDetailsStep({
   formData,
+  areApplicationFieldsDisabled,
   onChange,
 }: Readonly<CaseDetailsStepProps>) {
   const { config } = useCategoryConfig();
@@ -865,6 +867,7 @@ function CaseDetailsStep({
           <Input
             id="intake-applicationDate"
             type="date"
+            disabled={areApplicationFieldsDisabled}
             value={isoToDateInputValue(formData.applicationDate)}
             onChange={(e) =>
               onChange(
@@ -899,6 +902,7 @@ function CaseDetailsStep({
           <Label htmlFor="intake-applicationType">Application Type</Label>
           <Select
             value={formData.applicationType ?? ""}
+            disabled={areApplicationFieldsDisabled}
             onValueChange={(v) => onChange("applicationType", v)}
           >
             <SelectTrigger id="intake-applicationType">
@@ -953,6 +957,7 @@ function CaseDetailsStep({
           <Label htmlFor="intake-retroRequested">Retro Requested</Label>
           <Input
             id="intake-retroRequested"
+            disabled={areApplicationFieldsDisabled}
             value={formData.retroRequested ?? ""}
             onChange={(e) => onChange("retroRequested", e.target.value)}
             placeholder="Month(s) requested"
@@ -963,6 +968,7 @@ function CaseDetailsStep({
       <div className="flex items-center gap-2">
         <Checkbox
           id="intake-withWaiver"
+          disabled={areApplicationFieldsDisabled}
           checked={formData.withWaiver ?? false}
           onCheckedChange={(v) => onChange("withWaiver", v === true)}
         />
@@ -977,6 +983,7 @@ function CaseDetailsStep({
 // --- Step 3: Checklist ---
 interface ChecklistStepProps {
   formData: IntakeFormData;
+  areApplicationFieldsDisabled: boolean;
   onChange: <K extends keyof IntakeFormData>(
     field: K,
     value: IntakeFormData[K],
@@ -1003,6 +1010,7 @@ const VOTER_STATUS_OPTIONS: { value: VoterFormStatusOption; label: string }[] =
 
 function ChecklistStep({
   formData,
+  areApplicationFieldsDisabled,
   onChange,
 }: Readonly<ChecklistStepProps>) {
   const toggleContactMethod = useCallback(
@@ -1037,6 +1045,7 @@ function ChecklistStep({
           <div key={field} className="flex items-center gap-2">
             <Checkbox
               id={`intake-${field}`}
+              disabled={areApplicationFieldsDisabled}
               checked={(formData[field] as boolean | undefined) ?? false}
               onCheckedChange={(v) =>
                 onChange(field, (v === true) as IntakeFormData[typeof field])
@@ -1088,6 +1097,7 @@ function ChecklistStep({
         <h3 id="voter-form-status-label" className="text-sm font-medium">Voter Registration Form</h3>
         <RadioGroup
           aria-labelledby="voter-form-status-label"
+          disabled={areApplicationFieldsDisabled}
           value={(formData.voterFormStatus as VoterFormStatusOption) ?? ""}
           onValueChange={(v) =>
             onChange("voterFormStatus", v as VoterFormStatusOption)
@@ -1117,6 +1127,7 @@ function ChecklistStep({
         <Input
           id="intake-avsConsentDate"
           type="date"
+          disabled={areApplicationFieldsDisabled}
           value={isoToDateInputValue(formData.avsConsentDate)}
           onChange={(e) =>
             onChange(
@@ -2027,6 +2038,7 @@ export function IntakeFormView({
     formData,
     availablePeople,
     isEditing,
+    areApplicationFieldsDisabled,
     isSubmitting,
     error,
     updateField,
@@ -2079,6 +2091,7 @@ export function IntakeFormView({
 
   const isLastStep = currentStep === INTAKE_STEPS.length - 1;
   const isFirstStep = currentStep === 0;
+  const shouldDisableApplicationFields = isEditing && areApplicationFieldsDisabled;
   const canUseSubmitShortcut = isLastStep
     ? canSubmit && !isSubmitting
     : isCurrentStepComplete && !isSubmitting;
@@ -2195,10 +2208,18 @@ export function IntakeFormView({
                 <ContactStep formData={formData} onChange={updateField} />
               )}
               {currentStep === 2 && (
-                <CaseDetailsStep formData={formData} onChange={updateField} />
+                <CaseDetailsStep
+                  formData={formData}
+                  areApplicationFieldsDisabled={shouldDisableApplicationFields}
+                  onChange={updateField}
+                />
               )}
               {currentStep === 3 && (
-                <ChecklistStep formData={formData} onChange={updateField} />
+                <ChecklistStep
+                  formData={formData}
+                  areApplicationFieldsDisabled={shouldDisableApplicationFields}
+                  onChange={updateField}
+                />
               )}
               {currentStep === 4 && (
                 <HouseholdStep

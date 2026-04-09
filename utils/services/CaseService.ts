@@ -647,7 +647,11 @@ export class CaseService {
       index === caseIndex ? caseWithChanges : c,
     );
 
-    const casesWithTouchedTimestamps = this.fileStorage.touchCaseTimestamps(casesWithChanges, [caseId]);
+    const casesWithTouchedTimestamps = this.fileStorage.touchCaseTimestamps(
+      casesWithChanges,
+      [caseId],
+      timestamp,
+    );
 
     // Write updated data
     const updatedData = this.mergePeopleRegistry(
@@ -726,7 +730,11 @@ export class CaseService {
       index === caseIndex ? caseWithUpdatedStatus : c,
     );
 
-    const casesWithTouchedTimestamps = this.fileStorage.touchCaseTimestamps(casesWithChanges, [caseId]);
+    const casesWithTouchedTimestamps = this.fileStorage.touchCaseTimestamps(
+      casesWithChanges,
+      [caseId],
+      timestamp,
+    );
 
     // Create activity log entry using factory method
     const activityEntry = ActivityLogService.createStatusChangeEntry({
@@ -742,6 +750,17 @@ export class CaseService {
     const updatedData: NormalizedFileData = {
       ...caseData,
       cases: casesWithTouchedTimestamps,
+      applications: syncRuntimeApplications(
+        {
+          ...caseData,
+          cases: casesWithTouchedTimestamps,
+        },
+        {
+          preferRuntimeCaseFields: true,
+          syncMode: "status-only",
+          transactionTimestamp: timestamp,
+        },
+      ).applications,
       activityLog: ActivityLogService.mergeActivityEntries(caseData.activityLog, [activityEntry]),
     };
 

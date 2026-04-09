@@ -1,17 +1,23 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
+  createClockSkewTouchCaseTimestamps,
+  createMockApplication,
   createMockCaseDisplay,
   createMockPersistedNormalizedFileData,
   createMockNewCaseRecordData,
   createMockNewPersonData,
   createMockPerson,
   createMockStoredCase,
+  TEST_SKEWED_TRANSACTION_TIMESTAMP,
+  TEST_TRANSACTION_TIMESTAMP,
+  withFrozenSystemTime,
 } from "@/src/test/testUtils";
 import type AutosaveFileService from "@/utils/AutosaveFileService";
 import { FileStorageService, type NormalizedFileData } from "@/utils/services/FileStorageService";
 import { CaseService } from "@/utils/services/CaseService";
-import type { PersistedCase } from "@/types/case";
+import type { CaseStatus, PersistedCase } from "@/types/case";
+import { mergeCategoryConfig } from "@/types/categoryConfig";
 
 type MockAutosaveFileService = Pick<AutosaveFileService, "readFile" | "writeFile" | "broadcastDataUpdate">;
 
@@ -79,6 +85,55 @@ function createLinkedRuntimeCase() {
       ],
     }),
   };
+}
+
+function createApplicantRef(personId: string) {
+  return { personId, role: "applicant" as const, isPrimary: true };
+}
+
+type StoredCaseOverrides = Partial<Omit<ReturnType<typeof createMockStoredCase>, "caseRecord">> & {
+  caseRecord?: Partial<ReturnType<typeof createMockStoredCase>["caseRecord"]>;
+};
+
+function createCaseWithPrimaryApplicant(
+  person: ReturnType<typeof createMockPerson>,
+  overrides: StoredCaseOverrides = {},
+) {
+  const { caseRecord: caseRecordOverrides, ...caseOverrides } = overrides;
+
+  return createMockStoredCase({
+    id: "case-1",
+    person,
+    people: [createApplicantRef(person.id)],
+    caseRecord: {
+      ...createMockStoredCase().caseRecord,
+      personId: person.id,
+      ...caseRecordOverrides,
+    },
+    ...caseOverrides,
+  });
+}
+
+function createPendingApplicationForCase(
+  applicantPersonId: string,
+  overrides: Partial<ReturnType<typeof createMockApplication>> = {},
+) {
+  return createMockApplication({
+    id: "application-1",
+    caseId: "case-1",
+    applicantPersonId,
+    status: "Pending",
+    statusHistory: [
+      {
+        id: "history-1",
+        status: "Pending",
+        effectiveDate: "2026-01-01",
+        changedAt: "2026-01-01T00:00:00.000Z",
+        source: "migration",
+      },
+    ],
+    ...overrides,
+  });
 }
 
 describe("CaseService hydration seam", () => {
@@ -149,14 +204,8 @@ describe("CaseService hydration seam", () => {
 
   it("fails to hydrate when a persisted case has no explicit primary ref", () => {
     const primaryPerson = createMockPerson({ id: "person-1" });
-    const storedCase = createMockStoredCase({
-      id: "case-1",
+    const storedCase = createCaseWithPrimaryApplicant(primaryPerson, {
       people: [{ personId: "person-1", role: "applicant", isPrimary: false }],
-      caseRecord: {
-        ...createMockStoredCase().caseRecord,
-        personId: "person-1",
-      },
-      person: primaryPerson,
     });
     const persistedCaseData = toPersistedCase(storedCase);
 
@@ -167,13 +216,11 @@ describe("CaseService hydration seam", () => {
 
   it("fails to hydrate when a referenced person is missing", () => {
     const primaryPerson = createMockPerson({ id: "person-1" });
-    const storedCase = createMockStoredCase({
-      id: "case-1",
+    const storedCase = createCaseWithPrimaryApplicant(primaryPerson, {
       people: [
         { personId: "person-1", role: "applicant", isPrimary: true },
         { personId: "person-2", role: "household_member", isPrimary: false },
       ],
-      person: primaryPerson,
     });
     const persistedCaseData = toPersistedCase(storedCase);
 
@@ -513,6 +560,249 @@ describe("CaseService hydration seam", () => {
           isPrimary: true,
         },
       ]);
+    });
+  });
+
+  describe("updateCaseStatus", () => {
+    it("synchronizes canonical application status/history while preserving historical applicant linkage", async () => {
+      // ARRANGE
+      const primaryPerson = createMockPerson({ id: "person-case-1", name: "Primary Person" });
+      const historicalApplicant = createMockPerson({
+        id: "person-historical-1",
+        name: "Historical Applicant",
+      });
+      vi.mocked(mockFileService.readFile).mockResolvedValue(
+        createMockPersistedNormalizedFileData({
+          people: [primaryPerson, historicalApplicant],
+          cases: [
+            createCaseWithPrimaryApplicant(primaryPerson, {
+              status: "Pending",
+              people: [createApplicantRef("person-case-1")],
+              caseRecord: {
+                status: "Pending",
+              },
+            }),
+          ],
+          applications: [createPendingApplicationForCase("person-historical-1")],
+        }),
+      );
+      vi.mocked(mockFileService.writeFile).mockResolvedValue(true);
+
+      // ACT
+      const result = await caseService.updateCaseStatus("case-1", "Approved" as CaseStatus);
+
+      // ASSERT
+      expect(result.status).toBe("Approved");
+      expect(result.caseRecord.status).toBe("Approved");
+      expect(mockFileService.writeFile).toHaveBeenCalledTimes(1);
+      const writtenData = vi.mocked(mockFileService.writeFile).mock.calls[0][0];
+      expect(writtenData.applications).toHaveLength(1);
+      expect(writtenData.applications[0]).toMatchObject({
+        id: "application-1",
+        applicantPersonId: "person-historical-1",
+        status: "Approved",
+      });
+      expect(writtenData.applications[0].statusHistory).toHaveLength(2);
+      expect(writtenData.applications[0].statusHistory[1]).toMatchObject({
+        status: "Approved",
+        source: "user",
+      });
+    });
+
+    it("updates the oldest terminal application when no non-terminal application exists", async () => {
+      // ARRANGE
+      const primaryPerson = createMockPerson({ id: "person-case-1", name: "Primary Person" });
+      const olderTerminalApplication = createMockApplication({
+        id: "application-older-terminal",
+        caseId: "case-1",
+        applicantPersonId: "person-case-1",
+        applicationDate: "2026-01-01",
+        applicationType: "Renewal",
+        createdAt: "2026-01-01T00:00:00.000Z",
+        status: "Approved",
+        hasWaiver: true,
+        retroRequestedAt: "2025-12-01",
+        retroMonths: ["2025-12"],
+        verification: {
+          isAppValidated: true,
+          isAgedDisabledVerified: true,
+          isCitizenshipVerified: true,
+          isResidencyVerified: true,
+          avsConsentDate: "2026-01-02",
+          voterFormStatus: "requested",
+          isIntakeCompleted: false,
+        },
+        statusHistory: [
+          {
+            id: "history-1",
+            status: "Approved",
+            effectiveDate: "2026-01-01",
+            changedAt: "2026-01-01T00:00:00.000Z",
+            source: "migration",
+          },
+        ],
+      });
+      const newerTerminalApplication = createMockApplication({
+        id: "application-newer-terminal",
+        caseId: "case-1",
+        applicantPersonId: "person-case-1",
+        applicationDate: "2026-03-01",
+        createdAt: "2026-03-01T00:00:00.000Z",
+        status: "Denied",
+        statusHistory: [
+          {
+            id: "history-2",
+            status: "Denied",
+            effectiveDate: "2026-03-01",
+            changedAt: "2026-03-01T00:00:00.000Z",
+            source: "migration",
+          },
+        ],
+      });
+      vi.mocked(mockFileService.readFile).mockResolvedValue(
+        createMockPersistedNormalizedFileData({
+          categoryConfig: mergeCategoryConfig({
+            caseStatuses: [
+              { name: "Approved", colorSlot: "green", countsAsCompleted: true },
+              { name: "Denied", colorSlot: "red", countsAsCompleted: true },
+              { name: "Pending", colorSlot: "amber", countsAsCompleted: false },
+            ],
+          }),
+          people: [primaryPerson],
+          cases: [
+            createCaseWithPrimaryApplicant(primaryPerson, {
+              status: "Approved" as CaseStatus,
+              caseRecord: {
+                status: "Approved" as CaseStatus,
+                applicationDate: "1999-04-01",
+                applicationType: "Stale Legacy Type",
+                withWaiver: false,
+                retroRequested: "1999-03-01",
+                retroMonths: [],
+                appValidated: false,
+                agedDisabledVerified: false,
+                citizenshipVerified: false,
+                residencyVerified: false,
+                avsConsentDate: "",
+                voterFormStatus: "",
+                intakeCompleted: true,
+              },
+            }),
+          ],
+          applications: [olderTerminalApplication, newerTerminalApplication],
+        }),
+      );
+      vi.mocked(mockFileService.writeFile).mockResolvedValue(true);
+
+      // ACT
+      const result = await caseService.updateCaseStatus("case-1", "Pending");
+
+      // ASSERT
+      expect(result.status).toBe("Pending");
+      expect(result.caseRecord.status).toBe("Pending");
+      expect(mockFileService.writeFile).toHaveBeenCalledTimes(1);
+      const writtenData = vi.mocked(mockFileService.writeFile).mock.calls[0][0];
+      expect(writtenData.applications).toHaveLength(2);
+      expect(writtenData.applications.find((application: { id: string }) => application.id === "application-older-terminal")).toMatchObject({
+        id: "application-older-terminal",
+        status: "Pending",
+        applicationDate: "2026-01-01",
+        applicationType: "Renewal",
+        hasWaiver: true,
+        retroRequestedAt: "2025-12-01",
+        retroMonths: ["2025-12"],
+        verification: {
+          isAppValidated: true,
+          isAgedDisabledVerified: true,
+          isCitizenshipVerified: true,
+          isResidencyVerified: true,
+          avsConsentDate: "2026-01-02",
+          voterFormStatus: "requested",
+          isIntakeCompleted: false,
+        },
+      });
+      expect(
+        writtenData.applications.find((application: { id: string }) => application.id === "application-older-terminal")?.statusHistory,
+      ).toHaveLength(2);
+      expect(
+        writtenData.applications.find((application: { id: string }) => application.id === "application-older-terminal")?.statusHistory[1],
+      ).toMatchObject({
+        status: "Pending",
+        source: "user",
+      });
+      expect(writtenData.applications.find((application: { id: string }) => application.id === "application-newer-terminal")).toEqual(
+        newerTerminalApplication,
+      );
+    });
+
+    it("aligns the status update transaction timestamp across case and application records", async () => {
+      // ARRANGE
+      const originalTouchCaseTimestamps = fileStorage.touchCaseTimestamps.bind(fileStorage);
+      vi.spyOn(fileStorage, "touchCaseTimestamps").mockImplementation(
+        createClockSkewTouchCaseTimestamps(
+          TEST_SKEWED_TRANSACTION_TIMESTAMP,
+          originalTouchCaseTimestamps,
+        ),
+      );
+      vi.mocked(mockFileService.readFile).mockResolvedValue(
+        createMockPersistedNormalizedFileData({
+          people: [createMockPerson({ id: "person-1" })],
+          cases: [
+            createCaseWithPrimaryApplicant(createMockPerson({ id: "person-1" }), {
+              status: "Pending",
+              caseRecord: {
+                status: "Pending",
+              },
+            }),
+          ],
+          applications: [createPendingApplicationForCase("person-1")],
+        }),
+      );
+      vi.mocked(mockFileService.writeFile).mockResolvedValue(true);
+
+      await withFrozenSystemTime(TEST_TRANSACTION_TIMESTAMP, async () => {
+        // ACT
+        const result = await caseService.updateCaseStatus("case-1", "Approved" as CaseStatus);
+
+        // ASSERT
+        expect(result.updatedAt).toBe(TEST_TRANSACTION_TIMESTAMP);
+      });
+
+      const writtenData = vi.mocked(mockFileService.writeFile).mock.calls[0][0];
+      expect(writtenData.cases[0].updatedAt).toBe(TEST_TRANSACTION_TIMESTAMP);
+      expect(writtenData.cases[0].caseRecord.updatedDate).toBe(TEST_TRANSACTION_TIMESTAMP);
+      expect(writtenData.activityLog[0].timestamp).toBe(TEST_TRANSACTION_TIMESTAMP);
+      expect(writtenData.applications[0].updatedAt).toBe(TEST_TRANSACTION_TIMESTAMP);
+      expect(writtenData.applications[0].statusHistory[1]).toMatchObject({
+        status: "Approved",
+        effectiveDate: "2026-04-08",
+        changedAt: TEST_TRANSACTION_TIMESTAMP,
+      });
+    });
+
+    it("does not write or append application status history when the status is unchanged", async () => {
+      // ARRANGE
+      vi.mocked(mockFileService.readFile).mockResolvedValue(
+        createMockPersistedNormalizedFileData({
+          people: [createMockPerson({ id: "person-1" })],
+          cases: [
+            createCaseWithPrimaryApplicant(createMockPerson({ id: "person-1" }), {
+              status: "Pending",
+              caseRecord: {
+                status: "Pending",
+              },
+            }),
+          ],
+          applications: [createPendingApplicationForCase("person-1")],
+        }),
+      );
+
+      // ACT
+      const result = await caseService.updateCaseStatus("case-1", "Pending");
+
+      // ASSERT
+      expect(result.caseRecord.status).toBe("Pending");
+      expect(mockFileService.writeFile).not.toHaveBeenCalled();
     });
   });
 });

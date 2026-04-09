@@ -20,6 +20,7 @@ import {
   type SetStateAction,
 } from "react";
 import { toast } from "sonner";
+import { selectOldestNonTerminalApplication } from "@/domain/applications";
 import { dateInputValueToISO, normalizePhoneNumber } from "@/domain/common";
 import { useDataManagerSafe } from "../contexts/DataManagerContext";
 import { useCategoryConfig } from "../contexts/CategoryConfigContext";
@@ -38,6 +39,9 @@ import {
   type IntakeFormData,
   validateIntakeForm,
 } from "@/domain/validation/intake.schema";
+import { useDataChangeCount } from "@/hooks/useDataSync";
+import type { Application } from "@/types/application";
+import { getCompletionStatusNames } from "@/types/categoryConfig";
 import type {
   CaseStatus,
   HouseholdMemberData,
@@ -89,8 +93,12 @@ export interface UseIntakeWorkflowReturn {
   formData: IntakeFormData;
   /** Reusable people available in the workspace registry */
   availablePeople: Person[];
+  /** Applications loaded for the case when editing */
+  caseApplications: Application[];
   /** Whether the workflow is editing an existing case */
   isEditing: boolean;
+  /** Whether application-owned intake fields should be disabled */
+  areApplicationFieldsDisabled: boolean;
   /** Whether a submission is in progress */
   isSubmitting: boolean;
   /** Most recent error message, or null */
@@ -138,6 +146,7 @@ interface PrepareIntakeSubmissionParams {
     caseTypes: string[];
   };
   isEditing: boolean;
+  preserveApplicationOwnedFields: boolean;
 }
 
 function prepareIntakeSubmission({
@@ -145,6 +154,7 @@ function prepareIntakeSubmission({
   activeExistingCase,
   config,
   isEditing,
+  preserveApplicationOwnedFields,
 }: PrepareIntakeSubmissionParams): PreparedIntakeSubmission {
   const populatedRelationships = (validatedFormData.relationships ?? []).filter(
     isRelationshipPopulated,
@@ -176,6 +186,9 @@ function prepareIntakeSubmission({
   const normalizedAvsConsentDate = dateInputValueToISO(
     validatedFormData.avsConsentDate,
   );
+  const hasExplicitlyClearedAvsConsentDate =
+    typeof validatedFormData.avsConsentDate === "string" &&
+    validatedFormData.avsConsentDate.trim() === "";
   const defaultLivingArrangement = config.livingArrangements[0] || "";
   const personBase = createPersonData(activeExistingCase, {
     livingArrangement: defaultLivingArrangement,
@@ -250,37 +263,59 @@ function prepareIntakeSubmission({
       ...caseRecordBase,
       mcn: trimmedMcn,
       applicationDate:
-        normalizedApplicationDate ??
-        validatedFormData.applicationDate ??
-        caseRecordBase.applicationDate,
+        preserveApplicationOwnedFields
+          ? caseRecordBase.applicationDate
+          : (normalizedApplicationDate ??
+              validatedFormData.applicationDate ??
+              caseRecordBase.applicationDate),
       caseType:
         validatedFormData.caseType || caseRecordBase.caseType || config.caseTypes[0] || "",
       applicationType:
-        validatedFormData.applicationType ?? caseRecordBase.applicationType ?? "",
+        preserveApplicationOwnedFields
+          ? (caseRecordBase.applicationType ?? "")
+          : (validatedFormData.applicationType ?? caseRecordBase.applicationType ?? ""),
       personId: resolvedApplicantPersonId,
       status: caseRecordBase.status || defaultStatus,
       livingArrangement:
         validatedFormData.livingArrangement ||
         caseRecordBase.livingArrangement ||
         defaultLivingArrangement,
-      withWaiver: validatedFormData.withWaiver ?? false,
+      withWaiver: preserveApplicationOwnedFields
+        ? (caseRecordBase.withWaiver ?? false)
+        : (validatedFormData.withWaiver ?? false),
       admissionDate: normalizedAdmissionDate ?? caseRecordBase.admissionDate ?? "",
       organizationId:
         validatedFormData.organizationId ?? caseRecordBase.organizationId ?? "",
       retroRequested:
-        validatedFormData.retroRequested ?? caseRecordBase.retroRequested ?? "",
-      appValidated: validatedFormData.appValidated ?? false,
-      agedDisabledVerified: validatedFormData.agedDisabledVerified ?? false,
-      citizenshipVerified: validatedFormData.citizenshipVerified ?? false,
-      residencyVerified: validatedFormData.residencyVerified ?? false,
+        preserveApplicationOwnedFields
+          ? (caseRecordBase.retroRequested ?? "")
+          : (validatedFormData.retroRequested ?? caseRecordBase.retroRequested ?? ""),
+      appValidated: preserveApplicationOwnedFields
+        ? (caseRecordBase.appValidated ?? false)
+        : (validatedFormData.appValidated ?? false),
+      agedDisabledVerified: preserveApplicationOwnedFields
+        ? (caseRecordBase.agedDisabledVerified ?? false)
+        : (validatedFormData.agedDisabledVerified ?? false),
+      citizenshipVerified: preserveApplicationOwnedFields
+        ? (caseRecordBase.citizenshipVerified ?? false)
+        : (validatedFormData.citizenshipVerified ?? false),
+      residencyVerified: preserveApplicationOwnedFields
+        ? (caseRecordBase.residencyVerified ?? false)
+        : (validatedFormData.residencyVerified ?? false),
       contactMethods: (validatedFormData.contactMethods ?? []) as NonNullable<
         NewCaseRecordData["contactMethods"]
       >,
-      voterFormStatus: (validatedFormData.voterFormStatus ?? "") as NonNullable<
-        NewCaseRecordData["voterFormStatus"]
-      >,
+      voterFormStatus: (preserveApplicationOwnedFields
+        ? caseRecordBase.voterFormStatus ?? ""
+        : validatedFormData.voterFormStatus ?? "") as NonNullable<
+          NewCaseRecordData["voterFormStatus"]
+        >,
       pregnancy: validatedFormData.pregnancy ?? false,
-      avsConsentDate: normalizedAvsConsentDate ?? caseRecordBase.avsConsentDate ?? "",
+      avsConsentDate: preserveApplicationOwnedFields
+        ? (caseRecordBase.avsConsentDate ?? "")
+        : (hasExplicitlyClearedAvsConsentDate
+            ? ""
+            : (normalizedAvsConsentDate ?? caseRecordBase.avsConsentDate ?? "")),
       maritalStatus: validatedFormData.maritalStatus ?? "",
       intakeCompleted: true,
     },
@@ -325,11 +360,16 @@ export function useIntakeWorkflow({
     existingCase,
   );
   const activeExistingCase = editSourceCase ?? existingCase;
+  const activeExistingCaseId = activeExistingCase?.id;
   const initialCurrentStep = createInitialCurrentStep(existingCase);
+  const dataChangeCount = useDataChangeCount();
 
   // ---- State ----------------------------------------------------------------
   const [currentStep, setCurrentStep] = useState(initialCurrentStep);
   const currentStepRef = useRef(currentStep);
+  const previousApplicationsCaseIdRef = useRef<string | undefined>(
+    activeExistingCase?.id,
+  );
   const [visitedSteps, setVisitedSteps] = useState<Set<number>>(
     () => createInitialVisitedSteps(existingCase),
   );
@@ -337,6 +377,10 @@ export function useIntakeWorkflow({
     createIntakeFormData(activeExistingCase),
   );
   const [availablePeople, setAvailablePeople] = useState<Person[]>([]);
+  const [caseApplications, setCaseApplications] = useState<Application[]>([]);
+  const [hasLoadedCaseApplications, setHasLoadedCaseApplications] = useState(
+    !isEditing,
+  );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -405,7 +449,108 @@ export function useIntakeWorkflow({
     };
   }, [dataManager]);
 
+  useEffect(() => {
+    if (!activeExistingCaseId) {
+      previousApplicationsCaseIdRef.current = undefined;
+      setCaseApplications([]);
+      setHasLoadedCaseApplications(true);
+      return;
+    }
+
+    if (!dataManager || typeof dataManager.getApplicationsForCase !== "function") {
+      previousApplicationsCaseIdRef.current = activeExistingCaseId;
+      setCaseApplications([]);
+      setHasLoadedCaseApplications(true);
+      return;
+    }
+
+    let isDisposed = false;
+    const previousCaseId = previousApplicationsCaseIdRef.current;
+    previousApplicationsCaseIdRef.current = activeExistingCaseId;
+
+    setHasLoadedCaseApplications(false);
+
+    if (previousCaseId !== activeExistingCaseId) {
+      setCaseApplications([]);
+    }
+
+    const loadCaseApplications = async () => {
+      try {
+        const [applicationsResult, refreshedCaseResult] = await Promise.allSettled([
+          dataManager.getApplicationsForCase(activeExistingCaseId),
+          typeof dataManager.getCaseById === "function"
+            ? dataManager.getCaseById(activeExistingCaseId)
+            : Promise.resolve<StoredCase | null>(null),
+        ]);
+
+        if (applicationsResult.status === "rejected") {
+          throw applicationsResult.reason;
+        }
+
+        if (isDisposed) {
+          return;
+        }
+
+        setCaseApplications(applicationsResult.value);
+
+        if (
+          refreshedCaseResult.status === "fulfilled" &&
+          refreshedCaseResult.value
+        ) {
+          editSourceCaseRef.current = refreshedCaseResult.value;
+          setEditSourceCase(refreshedCaseResult.value);
+        }
+
+        if (refreshedCaseResult.status === "rejected") {
+          logger.warn("Failed to refresh intake edit source case", {
+            error: extractErrorMessage(refreshedCaseResult.reason),
+            caseId: activeExistingCaseId,
+          });
+        }
+      } catch (error) {
+        if (isDisposed) {
+          return;
+        }
+
+        logger.warn("Failed to load case applications for intake", {
+          error: extractErrorMessage(error),
+          caseId: activeExistingCaseId,
+        });
+        setCaseApplications([]);
+      } finally {
+        if (!isDisposed) {
+          setHasLoadedCaseApplications(true);
+        }
+      }
+    };
+
+    void loadCaseApplications();
+
+    return () => {
+      isDisposed = true;
+    };
+  }, [activeExistingCaseId, dataChangeCount, dataManager]);
+
   // ---- Derived values -------------------------------------------------------
+  const completionStatuses = useMemo(
+    () => getCompletionStatusNames(config),
+    [config],
+  );
+
+  const editableApplication = useMemo(
+    () =>
+      selectOldestNonTerminalApplication(
+        caseApplications,
+        completionStatuses,
+      ),
+    [caseApplications, completionStatuses],
+  );
+
+  const areApplicationFieldsDisabled = useMemo(
+    () => isEditing && (!hasLoadedCaseApplications || editableApplication === null),
+    [editableApplication, hasLoadedCaseApplications, isEditing],
+  );
+
   const isCurrentStepComplete = useMemo(
     () => isStepComplete(currentStep, formData),
     [currentStep, formData],
@@ -525,6 +670,7 @@ export function useIntakeWorkflow({
         activeExistingCase,
         config,
         isEditing,
+        preserveApplicationOwnedFields: isEditing && areApplicationFieldsDisabled,
       });
 
       const savedCase = isEditing && activeExistingCase
@@ -568,6 +714,7 @@ export function useIntakeWorkflow({
     }
   }, [
     activeExistingCase,
+    areApplicationFieldsDisabled,
     dataManager,
     canSubmit,
     formData,
@@ -582,7 +729,9 @@ export function useIntakeWorkflow({
     visitedSteps,
     formData,
     availablePeople,
+    caseApplications,
     isEditing,
+    areApplicationFieldsDisabled,
     isSubmitting,
     error,
     updateField,

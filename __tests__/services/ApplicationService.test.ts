@@ -1,6 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { createMockApplication, createMockNormalizedFileData, createMockStoredCase } from "@/src/test/testUtils";
+import {
+  applyTouchedCaseTimestamps,
+  createClockSkewTouchCaseTimestamps,
+  createMockApplication,
+  createMockNormalizedFileData,
+  createMockStoredCase,
+  TEST_SKEWED_TRANSACTION_TIMESTAMP,
+  TEST_TRANSACTION_TIMESTAMP,
+  withFrozenSystemTime,
+} from "@/src/test/testUtils";
 import type { Application } from "@/types/application";
 import {
   ApplicationService,
@@ -10,72 +19,121 @@ import type { NormalizedFileData } from "@/utils/services/FileStorageService";
 
 type ApplicationServiceFileStorageMock = ApplicationFileStorage;
 
+function createMockFileStorage() {
+  let storedData = createMockNormalizedFileData({
+    cases: [
+      createMockStoredCase({
+        id: "case-1",
+        updatedAt: "2026-01-01T00:00:00.000Z",
+      }),
+    ],
+    applications: [
+      createMockApplication({
+        id: "application-1",
+        caseId: "case-1",
+      }),
+    ],
+  });
+
+  const readFileData = vi
+    .fn<() => Promise<NormalizedFileData | null>>()
+    .mockImplementation(() => Promise.resolve(storedData));
+
+  const writeNormalizedData = vi
+    .fn<(data: NormalizedFileData) => Promise<NormalizedFileData>>()
+    .mockImplementation((data) => {
+      storedData = data;
+      return Promise.resolve(data);
+    });
+
+  const getApplicationsForCase = vi
+    .fn<(data: NormalizedFileData, caseId: string) => Application[]>()
+    .mockImplementation((data, caseId) =>
+      (data.applications ?? []).filter((application) => application.caseId === caseId),
+    );
+
+  const touchCaseTimestamps = vi
+    .fn<
+      (
+        cases: NormalizedFileData["cases"],
+        touchedCaseIds?: Iterable<string>,
+        timestampOverride?: string,
+      ) => NormalizedFileData["cases"]
+    >()
+    .mockImplementation(applyTouchedCaseTimestamps);
+
+  return {
+    readFileData,
+    writeNormalizedData,
+    getApplicationsForCase,
+    touchCaseTimestamps,
+    setData: (data: typeof storedData) => {
+      storedData = data;
+    },
+  } satisfies ApplicationServiceFileStorageMock & {
+    setData: (data: NormalizedFileData) => void;
+  };
+}
+
 describe("ApplicationService", () => {
   let service: ApplicationService;
   let mockFileStorage: ReturnType<typeof createMockFileStorage>;
 
-  function createMockFileStorage() {
-    let storedData = createMockNormalizedFileData({
-      cases: [
-        createMockStoredCase({
-          id: "case-1",
-          updatedAt: "2026-01-01T00:00:00.000Z",
-        }),
+  function createApplicationWithPendingHistory(overrides: Partial<Application> = {}) {
+    return createMockApplication({
+      id: "application-1",
+      caseId: "case-1",
+      statusHistory: [
+        {
+          id: "history-1",
+          status: "Pending",
+          effectiveDate: "2026-01-01",
+          changedAt: "2026-01-01T00:00:00.000Z",
+          source: "migration",
+        },
       ],
-      applications: [
-        createMockApplication({
-          id: "application-1",
-          caseId: "case-1",
-        }),
-      ],
+      ...overrides,
     });
+  }
 
-    const readFileData = vi
-      .fn<() => Promise<NormalizedFileData | null>>()
-      .mockImplementation(() => Promise.resolve(storedData));
+  function setSingleApplicationData(application: Application) {
+    mockFileStorage.setData(
+      createMockNormalizedFileData({
+        cases: [createMockStoredCase({ id: "case-1" })],
+        applications: [application],
+      }),
+    );
+  }
 
-    const writeNormalizedData = vi
-      .fn<(data: NormalizedFileData) => Promise<NormalizedFileData>>()
-      .mockImplementation((data) => {
-        storedData = data;
-        return Promise.resolve(data);
-      });
+  async function expectConsistentTransactionTimestamp(
+    action: () => Promise<void>,
+    assertWrittenData?: (writtenData: NormalizedFileData) => void,
+  ) {
+    mockFileStorage.touchCaseTimestamps.mockImplementation(
+      createClockSkewTouchCaseTimestamps(TEST_SKEWED_TRANSACTION_TIMESTAMP),
+    );
 
-    const getApplicationsForCase = vi
-      .fn<(data: NormalizedFileData, caseId: string) => Application[]>()
-      .mockImplementation((data, caseId) =>
-        (data.applications ?? []).filter((application) => application.caseId === caseId),
-      );
+    await withFrozenSystemTime(TEST_TRANSACTION_TIMESTAMP, action);
 
-    const touchCaseTimestamps = vi
-      .fn<(cases: NormalizedFileData["cases"], touchedCaseIds?: Iterable<string>) => NormalizedFileData["cases"]>()
-      .mockImplementation((cases, touchedCaseIds) => {
-        if (!touchedCaseIds) {
-          return cases;
-        }
+    expect(mockFileStorage.touchCaseTimestamps).toHaveBeenCalledWith(
+      expect.any(Array),
+      ["case-1"],
+      TEST_TRANSACTION_TIMESTAMP,
+    );
 
-        const caseIds = new Set(touchedCaseIds);
-        if (caseIds.size === 0) {
-          return cases;
-        }
+    const writtenData = mockFileStorage.writeNormalizedData.mock.calls[0][0];
+    expect(writtenData.cases[0].updatedAt).toBe(TEST_TRANSACTION_TIMESTAMP);
+    expect(writtenData.activityLog[0].timestamp).toBe(TEST_TRANSACTION_TIMESTAMP);
+    assertWrittenData?.(writtenData);
+  }
 
-        const timestamp = new Date().toISOString();
-        return cases.map((caseItem) =>
-          caseIds.has(caseItem.id) ? { ...caseItem, updatedAt: timestamp } : caseItem,
-        );
-      });
-
-    return {
-      readFileData,
-      writeNormalizedData,
-      getApplicationsForCase,
-      touchCaseTimestamps,
-      setData: (data: typeof storedData) => {
-        storedData = data;
-      },
-    } satisfies ApplicationServiceFileStorageMock & {
-      setData: (data: NormalizedFileData) => void;
-    };
+  function setCrossCaseApplicationData() {
+    mockFileStorage.setData(
+      createMockNormalizedFileData({
+        cases: [createMockStoredCase({ id: "case-1" }), createMockStoredCase({ id: "case-2" })],
+        applications: [createMockApplication({ id: "application-1", caseId: "case-2" })],
+      }),
+    );
   }
 
   beforeEach(() => {
@@ -115,7 +173,7 @@ describe("ApplicationService", () => {
       caseId: "case-1",
     });
     expect(mockFileStorage.writeNormalizedData).toHaveBeenCalledTimes(1);
-    const writtenData = mockFileStorage.writeNormalizedData.mock.calls[0][0] as NormalizedFileData;
+    const writtenData = mockFileStorage.writeNormalizedData.mock.calls[0][0];
     expect(writtenData.applications).toHaveLength(2);
     expect(writtenData.activityLog).toHaveLength(1);
     expect(writtenData.activityLog[0]).toMatchObject({
@@ -128,6 +186,18 @@ describe("ApplicationService", () => {
       },
     });
     expect(writtenData.cases[0].updatedAt).not.toBe("2026-01-01T00:00:00.000Z");
+  });
+
+  it("reuses one transaction timestamp when adding an application", async () => {
+    // Arrange
+    const application = createMockApplication({
+      id: "application-2",
+      caseId: "case-1",
+    });
+
+    await expectConsistentTransactionTimestamp(async () => {
+      await service.addApplication(application);
+    });
   });
 
   it("updates an application while preserving immutable identifiers", async () => {
@@ -152,7 +222,7 @@ describe("ApplicationService", () => {
     });
     expect(result.verification.isAppValidated).toBe(true);
     expect(mockFileStorage.writeNormalizedData).toHaveBeenCalledTimes(1);
-    const writtenData = mockFileStorage.writeNormalizedData.mock.calls[0][0] as NormalizedFileData;
+    const writtenData = mockFileStorage.writeNormalizedData.mock.calls[0][0];
     expect(writtenData.activityLog).toHaveLength(1);
     expect(writtenData.activityLog[0]).toMatchObject({
       caseId: "case-1",
@@ -171,12 +241,7 @@ describe("ApplicationService", () => {
 
   it("fails to update application if it belongs to a different case", async () => {
     // Arrange
-    mockFileStorage.setData(
-      createMockNormalizedFileData({
-        cases: [createMockStoredCase({ id: "case-1" }), createMockStoredCase({ id: "case-2" })],
-        applications: [createMockApplication({ id: "application-1", caseId: "case-2" })],
-      }),
-    );
+    setCrossCaseApplicationData();
 
     // Act & Assert
     await expect(
@@ -197,25 +262,8 @@ describe("ApplicationService", () => {
 
   it("appends status history and updates the top-level status", async () => {
     // Arrange
-    const initialApplication = createMockApplication({
-      id: "application-1",
-      caseId: "case-1",
-      statusHistory: [
-        {
-          id: "history-1",
-          status: "Pending",
-          effectiveDate: "2026-01-01",
-          changedAt: "2026-01-01T00:00:00.000Z",
-          source: "migration",
-        },
-      ],
-    });
-    mockFileStorage.setData(
-      createMockNormalizedFileData({
-        cases: [createMockStoredCase({ id: "case-1" })],
-        applications: [initialApplication],
-      }),
-    );
+    const initialApplication = createApplicationWithPendingHistory();
+    setSingleApplicationData(initialApplication);
 
     // Act
     const result = await service.addStatusHistory("case-1", "application-1", {
@@ -234,7 +282,7 @@ describe("ApplicationService", () => {
       status: "Approved",
     });
     expect(mockFileStorage.writeNormalizedData).toHaveBeenCalledTimes(1);
-    const writtenData = mockFileStorage.writeNormalizedData.mock.calls[0][0] as NormalizedFileData;
+    const writtenData = mockFileStorage.writeNormalizedData.mock.calls[0][0];
     expect(writtenData.activityLog).toHaveLength(1);
     expect(writtenData.activityLog[0]).toMatchObject({
       caseId: "case-1",
@@ -250,14 +298,26 @@ describe("ApplicationService", () => {
     expect(writtenData.cases[0].updatedAt).not.toBe("2026-01-01T00:00:00.000Z");
   });
 
+  it("reuses one transaction timestamp when appending application status history", async () => {
+    // Arrange
+    setSingleApplicationData(createApplicationWithPendingHistory());
+
+    await expectConsistentTransactionTimestamp(async () => {
+      await service.addStatusHistory("case-1", "application-1", {
+        id: "history-2",
+        status: "Approved",
+        effectiveDate: "2026-04-08",
+        changedAt: TEST_TRANSACTION_TIMESTAMP,
+        source: "user",
+      });
+    }, (writtenData) => {
+      expect(writtenData.applications?.[0].updatedAt).toBe(TEST_TRANSACTION_TIMESTAMP);
+    });
+  });
+
   it("fails to add status history if application belongs to a different case", async () => {
     // Arrange
-    mockFileStorage.setData(
-      createMockNormalizedFileData({
-        cases: [createMockStoredCase({ id: "case-1" }), createMockStoredCase({ id: "case-2" })],
-        applications: [createMockApplication({ id: "application-1", caseId: "case-2" })],
-      }),
-    );
+    setCrossCaseApplicationData();
 
     // Act & Assert
     await expect(

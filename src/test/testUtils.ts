@@ -15,6 +15,42 @@ import type { AppNavigationConfig } from '@/components/app/AppNavigationShell'
  * Test data factories for creating mock data objects
  */
 
+const createBaseNormalizedMetadata = () => ({
+  exported_at: '2026-01-01T00:00:00.000Z',
+  total_cases: 0,
+  categoryConfig: mergeCategoryConfig(),
+  activityLog: [],
+})
+
+const createBaseFinancialItemFields = (category: CaseCategory) => {
+  const timestamp = new Date().toISOString()
+
+  return {
+    id: `${category}-test-1`,
+    description: `Test ${category} item`,
+    amount: 1000,
+    location: 'Test Bank',
+    accountNumber: '1234',
+    verificationStatus: 'Needs VR',
+    frequency: category === 'resources' ? undefined : 'monthly',
+    notes: 'Test notes',
+    createdAt: timestamp,
+    updatedAt: timestamp,
+  }
+}
+
+const createBaseNoteFields = () => {
+  const timestamp = new Date().toISOString()
+
+  return {
+    id: 'note-test-1',
+    content: 'This is a test note',
+    category: 'General',
+    createdAt: timestamp,
+    updatedAt: timestamp,
+  }
+}
+
 export const createMockAmountHistoryEntry = (overrides: Partial<AmountHistoryEntry> = {}): AmountHistoryEntry => ({
   id: 'entry-test-1',
   amount: 1000,
@@ -60,25 +96,12 @@ export const createMockPerson = (overrides: Partial<Person> = {}): Person => ({
 })
 
 export const createMockFinancialItem = (category: CaseCategory, overrides: Partial<FinancialItem> = {}): FinancialItem => ({
-  id: `${category}-test-1`,
-  description: `Test ${category} item`,
-  amount: 1000,
-  location: 'Test Bank',
-  accountNumber: '1234',
-  verificationStatus: 'Needs VR',
-  frequency: category === 'resources' ? undefined : 'monthly',
-  notes: 'Test notes',
-  createdAt: new Date().toISOString(),
-  updatedAt: new Date().toISOString(),
+  ...createBaseFinancialItemFields(category),
   ...overrides
 })
 
 export const createMockNote = (overrides: Partial<Note> = {}): Note => ({
-  id: 'note-test-1',
-  content: 'This is a test note',
-  category: 'General',
-  createdAt: new Date().toISOString(),
-  updatedAt: new Date().toISOString(),
+  ...createBaseNoteFields(),
   ...overrides
 })
 
@@ -211,12 +234,59 @@ export const createMockNormalizedFileData = (
   financials: [],
   notes: [],
   alerts: [],
-  exported_at: '2026-01-01T00:00:00.000Z',
-  total_cases: 0,
-  categoryConfig: mergeCategoryConfig(),
-  activityLog: [],
+  ...createBaseNormalizedMetadata(),
   ...overrides,
 })
+
+export const TEST_TRANSACTION_TIMESTAMP = '2026-04-08T10:00:00.000Z'
+
+export const TEST_SKEWED_TRANSACTION_TIMESTAMP = '2026-04-08T10:00:01.000Z'
+
+export const applyTouchedCaseTimestamps = (
+  cases: StoredCase[],
+  touchedCaseIds?: Iterable<string>,
+  timestampOverride?: string,
+): StoredCase[] => {
+  if (!touchedCaseIds) {
+    return cases
+  }
+
+  const caseIds = new Set(touchedCaseIds)
+  if (caseIds.size === 0) {
+    return cases
+  }
+
+  const timestamp = timestampOverride ?? new Date().toISOString()
+  return cases.map((caseItem) =>
+    caseIds.has(caseItem.id) ? { ...caseItem, updatedAt: timestamp } : caseItem,
+  )
+}
+
+export const createClockSkewTouchCaseTimestamps = (
+  skewedTimestamp: string,
+  delegate: typeof applyTouchedCaseTimestamps = applyTouchedCaseTimestamps,
+) => (
+  cases: StoredCase[],
+  touchedCaseIds?: Iterable<string>,
+  timestampOverride?: string,
+): StoredCase[] => {
+  vi.setSystemTime(new Date(skewedTimestamp))
+  return delegate(cases, touchedCaseIds, timestampOverride)
+}
+
+export async function withFrozenSystemTime<T>(
+  timestamp: string,
+  callback: () => Promise<T> | T,
+): Promise<T> {
+  vi.useFakeTimers()
+  vi.setSystemTime(new Date(timestamp))
+
+  try {
+    return await callback()
+  } finally {
+    vi.useRealTimers()
+  }
+}
 
 export const createMockPersistedNormalizedFileData = (
   overrides: Partial<NormalizedFileData> = {},
@@ -248,12 +318,6 @@ export const createMockApplication = (
     isAgedDisabledVerified: false,
     isCitizenshipVerified: false,
     isResidencyVerified: false,
-    isAvsSubmitted: false,
-    avsSubmitDate: '',
-    hasInterfacesReviewed: false,
-    reviewVRs: false,
-    reviewPriorBudgets: false,
-    reviewPriorNarr: false,
     avsConsentDate: '',
     voterFormStatus: '',
     isIntakeCompleted: true,
@@ -271,10 +335,7 @@ export const createMockNormalizedFileDataV20 = (
   financials: [],
   notes: [],
   alerts: [],
-  exported_at: '2026-01-01T00:00:00.000Z',
-  total_cases: 0,
-  categoryConfig: mergeCategoryConfig(),
-  activityLog: [],
+  ...createBaseNormalizedMetadata(),
   ...overrides,
 })
 
@@ -468,18 +529,9 @@ export const createMockStoredFinancialItem = (
   caseId: string = 'case-test-1',
   overrides: Partial<StoredFinancialItem> = {}
 ): StoredFinancialItem => ({
-  id: `${category}-test-1`,
+  ...createBaseFinancialItemFields(category),
   caseId,
   category,
-  description: `Test ${category} item`,
-  amount: 1000,
-  location: 'Test Bank',
-  accountNumber: '1234',
-  verificationStatus: 'Needs VR',
-  frequency: category === 'resources' ? undefined : 'monthly',
-  notes: 'Test notes',
-  createdAt: new Date().toISOString(),
-  updatedAt: new Date().toISOString(),
   ...overrides
 })
 
@@ -487,12 +539,8 @@ export const createMockStoredNote = (
   caseId: string = 'case-test-1',
   overrides: Partial<StoredNote> = {}
 ): StoredNote => ({
-  id: 'note-test-1',
+  ...createBaseNoteFields(),
   caseId,
-  content: 'This is a test note',
-  category: 'General',
-  createdAt: new Date().toISOString(),
-  updatedAt: new Date().toISOString(),
   ...overrides
 })
 

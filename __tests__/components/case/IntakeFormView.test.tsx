@@ -98,6 +98,7 @@ function createDefaultTestHookState() {
     formData: createBlankIntakeForm(),
     availablePeople: [] as Person[],
     isEditing: false,
+    areApplicationFieldsDisabled: false,
     isSubmitting: false,
     error: null as string | null,
     updateField: mockUpdateField,
@@ -131,6 +132,8 @@ import { IntakeFormView } from "@/components/case/IntakeFormView";
 
 const HOUSEHOLD_STEP_INDEX = 4;
 const REVIEW_STEP_INDEX = INTAKE_STEPS.length - 1;
+const CASE_DETAILS_STEP_INDEX = 2;
+const CHECKLIST_STEP_INDEX = 3;
 const HOUSEHOLD_MEMBER_SUMMARY = /Spouse · Jordan Tester · 5559876543/i;
 const mockClickToCopy = vi.mocked(clickToCopy);
 
@@ -200,6 +203,14 @@ function withJordanHouseholdStepState() {
   withHouseholdStepState({
     formData: createJordanHouseholdFormData(),
   });
+}
+
+function withCaseDetailsStepState(overrides: Partial<typeof hookState> = {}) {
+  withHookState(createStepState(CASE_DETAILS_STEP_INDEX, overrides));
+}
+
+function withChecklistStepState(overrides: Partial<typeof hookState> = {}) {
+  withHookState(createStepState(CHECKLIST_STEP_INDEX, overrides));
 }
 
 async function expandJordanHouseholdMember(user: ReturnType<typeof userEvent.setup>) {
@@ -315,6 +326,84 @@ describe("IntakeFormView", () => {
 
     it("keeps case-level status options configured for the intake flow", () => {
       expect(mockCategoryConfig.caseStatuses.map((status) => status.name)).toEqual(["Intake"]);
+    });
+
+    it("keeps application-owned case-details fields enabled in create mode even if the hook disable flag is true", () => {
+      // ARRANGE
+      withCaseDetailsStepState({
+        isEditing: false,
+        areApplicationFieldsDisabled: true,
+      });
+
+      // ACT
+      renderIntakeFormView();
+
+      // ASSERT
+      expect(screen.getByLabelText(/Application Date/i)).not.toBeDisabled();
+      expect(screen.getByLabelText(/Application Type/i)).not.toBeDisabled();
+      expect(screen.getByLabelText(/Retro Requested/i)).not.toBeDisabled();
+      expect(screen.getByLabelText(/With Waiver/i)).not.toBeDisabled();
+    });
+
+    it("keeps application-owned checklist fields enabled in create mode even if the hook disable flag is true", () => {
+      // ARRANGE
+      withChecklistStepState({
+        isEditing: false,
+        areApplicationFieldsDisabled: true,
+      });
+
+      // ACT
+      renderIntakeFormView();
+
+      // ASSERT
+      expect(screen.getByLabelText(/Application validated/i)).not.toBeDisabled();
+      expect(screen.getByLabelText(/Aged\/disabled verified/i)).not.toBeDisabled();
+      expect(screen.getByLabelText(/Citizenship verified/i)).not.toBeDisabled();
+      expect(screen.getByLabelText(/Residency verified/i)).not.toBeDisabled();
+      expect(screen.getByLabelText(/^Not Set$/i)).not.toBeDisabled();
+      expect(screen.getByLabelText(/^Requested$/i)).not.toBeDisabled();
+      expect(screen.getByLabelText(/^Declined$/i)).not.toBeDisabled();
+      expect(screen.getByLabelText(/Not Answered/i)).not.toBeDisabled();
+      expect(screen.getByLabelText(/AVS Consent Date/i)).not.toBeDisabled();
+    });
+
+    it("disables application-owned case-details fields in edit mode when no editable application exists", () => {
+      // ARRANGE
+      withCaseDetailsStepState({
+        isEditing: true,
+        areApplicationFieldsDisabled: true,
+      });
+
+      // ACT
+      renderIntakeFormView();
+
+      // ASSERT
+      expect(screen.getByLabelText(/Application Date/i)).toBeDisabled();
+      expect(screen.getByLabelText(/Application Type/i)).toBeDisabled();
+      expect(screen.getByLabelText(/Retro Requested/i)).toBeDisabled();
+      expect(screen.getByLabelText(/With Waiver/i)).toBeDisabled();
+    });
+
+    it("disables application-owned checklist fields in edit mode when no editable application exists", () => {
+      // ARRANGE
+      withChecklistStepState({
+        isEditing: true,
+        areApplicationFieldsDisabled: true,
+      });
+
+      // ACT
+      renderIntakeFormView();
+
+      // ASSERT
+      expect(screen.getByLabelText(/Application validated/i)).toBeDisabled();
+      expect(screen.getByLabelText(/Aged\/disabled verified/i)).toBeDisabled();
+      expect(screen.getByLabelText(/Citizenship verified/i)).toBeDisabled();
+      expect(screen.getByLabelText(/Residency verified/i)).toBeDisabled();
+      expect(screen.getByLabelText(/^Not Set$/i)).toBeDisabled();
+      expect(screen.getByLabelText(/^Requested$/i)).toBeDisabled();
+      expect(screen.getByLabelText(/^Declined$/i)).toBeDisabled();
+      expect(screen.getByLabelText(/Not Answered/i)).toBeDisabled();
+      expect(screen.getByLabelText(/AVS Consent Date/i)).toBeDisabled();
     });
   });
 

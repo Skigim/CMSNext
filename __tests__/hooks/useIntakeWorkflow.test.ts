@@ -2,7 +2,10 @@ import { act, renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createBlankIntakeForm } from "@/domain/validation/intake.schema";
 import { INTAKE_STEPS } from "@/domain/cases/intake-steps";
+import { APPLICATION_STATUS } from "@/types/application";
+import type { CaseStatus } from "@/types/case";
 import {
+  createMockApplication,
   createMockHouseholdMemberData,
   createMockPerson,
   createMockStoredCase,
@@ -16,10 +19,30 @@ vi.mock("@/utils/performanceTracker", () => ({
   endMeasurement: vi.fn(),
 }));
 
+const mockLogger = vi.hoisted(() => ({
+  info: vi.fn(),
+  warn: vi.fn(),
+  error: vi.fn(),
+  debug: vi.fn(),
+  lifecycle: vi.fn(),
+}));
+
+const mockDataChangeCount = vi.hoisted(() => ({ value: 0 }));
+
+vi.mock("@/utils/logger", () => ({
+  createLogger: () => mockLogger,
+}));
+
+vi.mock("@/hooks/useDataSync", () => ({
+  useDataChangeCount: () => mockDataChangeCount.value,
+}));
+
 const mockDataManager = {
   createCompleteCase: vi.fn(),
   updateCompleteCase: vi.fn(),
   getAllPeople: vi.fn(),
+  getApplicationsForCase: vi.fn(),
+  getCaseById: vi.fn(),
 };
 
 vi.mock("@/contexts/DataManagerContext", () => ({
@@ -28,7 +51,13 @@ vi.mock("@/contexts/DataManagerContext", () => ({
 
 const mockCategoryConfig = {
   caseTypes: ["Medicaid"],
-  caseStatuses: [{ name: "Intake", colorSlot: "blue" }],
+  caseStatuses: [
+    { name: "Intake", colorSlot: "blue", countsAsCompleted: false },
+    { name: "Pending", colorSlot: "amber", countsAsCompleted: false },
+    { name: "Approved", colorSlot: "green", countsAsCompleted: true },
+    { name: "Denied", colorSlot: "red", countsAsCompleted: true },
+    { name: "Withdrawn", colorSlot: "slate", countsAsCompleted: true },
+  ],
   livingArrangements: ["Community"],
   groups: [],
   caseCategories: [],
@@ -46,7 +75,44 @@ import { useIntakeWorkflow } from "@/hooks/useIntakeWorkflow";
 const REVIEW_STEP_INDEX = INTAKE_STEPS.length - 1;
 
 function renderIntakeHook(options: Parameters<typeof useIntakeWorkflow>[0] = {}) {
-  return renderHook(() => useIntakeWorkflow(options));
+  const renderedHook = renderHook(() => useIntakeWorkflow(options));
+
+  // Flush the synchronous mount effects so tests that assert initial state do
+  // not leave queued React updates behind.
+  act(() => {});
+
+  return renderedHook;
+}
+
+function createDeferredPromise<T>() {
+  let resolvePromise: (value: T) => void;
+
+  const promise = new Promise<T>((resolve) => {
+    resolvePromise = resolve;
+  });
+
+  return {
+    promise,
+    resolve: (value: T) => resolvePromise(value),
+  };
+}
+
+function createPendingPromise<T>() {
+  return new Promise<T>(() => {});
+}
+
+function createEditCase(
+  id = "case-edit-1",
+  overrides: Parameters<typeof createMockStoredCase>[0] = {},
+) {
+  return createMockStoredCase({ id, ...overrides });
+}
+
+function createCaseApplication(
+  caseId: string,
+  overrides: Parameters<typeof createMockApplication>[0] = {},
+) {
+  return createMockApplication({ caseId, ...overrides });
 }
 
 /** Fills the four fields required to make the intake form submittable. */
@@ -64,6 +130,7 @@ function fillMinimumRequiredFields(result: ReturnType<typeof renderIntakeHook>["
 describe("useIntakeWorkflow", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockDataChangeCount.value = 0;
     mockDataManager.createCompleteCase.mockResolvedValue({
       id: "case-new-1",
       name: "Alice Smith",
@@ -82,7 +149,11 @@ describe("useIntakeWorkflow", () => {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     });
-    mockDataManager.getAllPeople.mockResolvedValue([]);
+    // Keep people reads pending by default so tests that only care about
+    // immediate mount state do not trigger avoidable async act warnings.
+    mockDataManager.getAllPeople.mockImplementation(() => createPendingPromise());
+    mockDataManager.getApplicationsForCase.mockResolvedValue([]);
+    mockDataManager.getCaseById.mockResolvedValue(null);
   });
 
   // --- Initial state --------------------------------------------------------
@@ -181,6 +252,267 @@ describe("useIntakeWorkflow", () => {
     it("canSubmit is false initially", () => {
       const { result } = renderIntakeHook();
       expect(result.current.canSubmit).toBe(false);
+    });
+
+    it("does not disable application-owned fields in create mode", () => {
+      // Arrange / Act
+      const { result } = renderIntakeHook();
+
+      // Assert
+      expect(result.current.caseApplications).toEqual([]);
+      expect(result.current.areApplicationFieldsDisabled).toBe(false);
+      expect(mockDataManager.getApplicationsForCase).not.toHaveBeenCalled();
+    });
+
+    it("keeps application-owned fields disabled during the initial edit-mode application fetch", async () => {
+      // ARRANGE
+      const existingCase = createEditCase();
+      const pendingApplications = createDeferredPromise<
+        ReturnType<typeof createMockApplication>[]
+      >();
+      mockDataManager.getApplicationsForCase.mockReturnValue(
+        pendingApplications.promise,
+      );
+
+      // ACT
+      const { result } = renderIntakeHook({ existingCase });
+
+      // ASSERT
+      expect(result.current.caseApplications).toEqual([]);
+      expect(result.current.areApplicationFieldsDisabled).toBe(true);
+      expect(mockDataManager.getApplicationsForCase).toHaveBeenCalledWith("case-edit-1");
+
+      await act(async () => {
+        pendingApplications.resolve([]);
+        await pendingApplications.promise;
+      });
+    });
+
+    it("disables application-owned fields when editing and only terminal applications exist", async () => {
+      // Arrange
+      const existingCase = createEditCase();
+      const terminalApplications = [
+        createCaseApplication("case-edit-1", {
+          id: "application-approved-1",
+          status: APPLICATION_STATUS.Approved,
+          applicationDate: "2026-01-01",
+        }),
+        createCaseApplication("case-edit-1", {
+          id: "application-denied-1",
+          status: APPLICATION_STATUS.Denied,
+          applicationDate: "2026-02-01",
+        }),
+      ];
+      mockDataManager.getApplicationsForCase.mockResolvedValue(terminalApplications);
+
+      // Act
+      const { result } = renderIntakeHook({ existingCase });
+
+      // Assert
+      await waitFor(() => {
+        expect(result.current.caseApplications).toEqual(terminalApplications);
+      });
+      expect(result.current.areApplicationFieldsDisabled).toBe(true);
+      expect(mockDataManager.getApplicationsForCase).toHaveBeenCalledWith("case-edit-1");
+    });
+
+    it("keeps application-owned fields enabled when editing and a non-terminal application exists", async () => {
+      // Arrange
+      const existingCase = createEditCase();
+      const applications = [
+        createCaseApplication("case-edit-1", {
+          id: "application-approved-1",
+          status: APPLICATION_STATUS.Approved,
+          applicationDate: "2026-01-01",
+        }),
+        createCaseApplication("case-edit-1", {
+          id: "application-pending-1",
+          status: APPLICATION_STATUS.Pending,
+          applicationDate: "2026-02-01",
+        }),
+      ];
+      mockDataManager.getApplicationsForCase.mockResolvedValue(applications);
+
+      // Act
+      const { result } = renderIntakeHook({ existingCase });
+
+      // Assert
+      await waitFor(() => {
+        expect(result.current.caseApplications).toEqual(applications);
+      });
+      expect(result.current.areApplicationFieldsDisabled).toBe(false);
+    });
+
+    it("does not refetch or relock when rerendered with a new existingCase object for the same case id", async () => {
+      // ARRANGE
+      const existingCase = createEditCase();
+      const refreshedExistingCase = createEditCase("case-edit-1", {
+        ...existingCase,
+        updatedAt: "2026-04-08T12:34:56.000Z",
+      });
+      const applications = [
+        createCaseApplication("case-edit-1", {
+          id: "application-pending-1",
+          status: APPLICATION_STATUS.Pending,
+          applicationDate: "2026-02-01",
+        }),
+      ];
+      const unexpectedRefetch = createDeferredPromise<
+        ReturnType<typeof createMockApplication>[]
+      >();
+      mockDataManager.getApplicationsForCase
+        .mockResolvedValueOnce(applications)
+        .mockReturnValueOnce(unexpectedRefetch.promise);
+
+      const { result, rerender } = renderHook(
+        ({ activeCase }) => useIntakeWorkflow({ existingCase: activeCase }),
+        { initialProps: { activeCase: existingCase } },
+      );
+
+      await waitFor(() => {
+        expect(result.current.caseApplications).toEqual(applications);
+      });
+      expect(result.current.areApplicationFieldsDisabled).toBe(false);
+      expect(mockDataManager.getApplicationsForCase).toHaveBeenCalledTimes(1);
+
+      // ACT
+      rerender({ activeCase: refreshedExistingCase });
+
+      // ASSERT
+      expect(result.current.caseApplications).toEqual(applications);
+      expect(result.current.areApplicationFieldsDisabled).toBe(false);
+      expect(mockDataManager.getApplicationsForCase).toHaveBeenCalledTimes(1);
+    });
+
+    it("refetches same-case applications when the file data change token advances", async () => {
+      // ARRANGE
+      const existingCase = createEditCase();
+      const initialApplications = [
+        createCaseApplication("case-edit-1", {
+          id: "application-pending-1",
+          status: APPLICATION_STATUS.Pending,
+          applicationDate: "2026-02-01",
+        }),
+      ];
+      const refreshedApplications = [
+        createCaseApplication("case-edit-1", {
+          id: "application-approved-1",
+          status: APPLICATION_STATUS.Approved,
+          applicationDate: "2026-03-01",
+        }),
+      ];
+      mockDataManager.getApplicationsForCase
+        .mockResolvedValueOnce(initialApplications)
+        .mockResolvedValueOnce(refreshedApplications);
+
+      const { result, rerender } = renderHook(
+        ({ activeCase }) => useIntakeWorkflow({ existingCase: activeCase }),
+        { initialProps: { activeCase: existingCase } },
+      );
+
+      await waitFor(() => {
+        expect(result.current.caseApplications).toEqual(initialApplications);
+      });
+      expect(mockDataManager.getApplicationsForCase).toHaveBeenCalledTimes(1);
+
+      // ACT
+      mockDataChangeCount.value = 1;
+      rerender({ activeCase: existingCase });
+
+      // ASSERT
+      await waitFor(() => {
+        expect(result.current.caseApplications).toEqual(refreshedApplications);
+      });
+      expect(mockDataManager.getApplicationsForCase).toHaveBeenCalledTimes(2);
+      expect(mockDataManager.getApplicationsForCase).toHaveBeenNthCalledWith(
+        2,
+        "case-edit-1",
+      );
+    });
+
+    it("fails closed when rerendering from an editable case to a terminal-only case until the new fetch resolves", async () => {
+      // ARRANGE
+      const editableCase = createEditCase("case-editable-1");
+      const terminalOnlyCase = createEditCase("case-terminal-1");
+      const editableApplications = [
+        createCaseApplication("case-editable-1", {
+          id: "application-pending-1",
+          status: APPLICATION_STATUS.Pending,
+          applicationDate: "2026-02-01",
+        }),
+      ];
+      const terminalApplications = [
+        createCaseApplication("case-terminal-1", {
+          id: "application-approved-1",
+          status: APPLICATION_STATUS.Approved,
+          applicationDate: "2026-03-01",
+        }),
+      ];
+      const pendingTerminalApplications = createDeferredPromise<
+        ReturnType<typeof createMockApplication>[]
+      >();
+      mockDataManager.getApplicationsForCase.mockImplementation((caseId: string) => {
+        if (caseId === "case-editable-1") {
+          return Promise.resolve(editableApplications);
+        }
+
+        if (caseId === "case-terminal-1") {
+          return pendingTerminalApplications.promise;
+        }
+
+        return Promise.resolve([]);
+      });
+
+      const { result, rerender } = renderHook(
+        ({ existingCase }) => useIntakeWorkflow({ existingCase }),
+        { initialProps: { existingCase: editableCase } },
+      );
+
+      await waitFor(() => {
+        expect(result.current.caseApplications).toEqual(editableApplications);
+      });
+      expect(result.current.areApplicationFieldsDisabled).toBe(false);
+
+      // ACT
+      rerender({ existingCase: terminalOnlyCase });
+
+      // ASSERT
+      expect(result.current.caseApplications).toEqual([]);
+      expect(result.current.areApplicationFieldsDisabled).toBe(true);
+      expect(mockDataManager.getApplicationsForCase).toHaveBeenLastCalledWith(
+        "case-terminal-1",
+      );
+
+      await act(async () => {
+        pendingTerminalApplications.resolve(terminalApplications);
+        await pendingTerminalApplications.promise;
+      });
+
+      await waitFor(() => {
+        expect(result.current.caseApplications).toEqual(terminalApplications);
+      });
+      expect(result.current.areApplicationFieldsDisabled).toBe(true);
+    });
+
+    it("logs a warning and falls back safely when application loading fails", async () => {
+      // Arrange
+      const existingCase = createEditCase();
+      mockDataManager.getApplicationsForCase.mockRejectedValue(
+        new Error("applications unavailable"),
+      );
+
+      // Act
+      const { result } = renderIntakeHook({ existingCase });
+
+      // Assert
+      await waitFor(() => {
+        expect(result.current.caseApplications).toEqual([]);
+      });
+      expect(result.current.areApplicationFieldsDisabled).toBe(true);
+      expect(mockLogger.warn).toHaveBeenCalledWith(
+        "Failed to load case applications for intake",
+        { error: "applications unavailable", caseId: "case-edit-1" },
+      );
     });
   });
 
@@ -505,6 +837,14 @@ describe("useIntakeWorkflow", () => {
           applicationDate: "2026-05-20",
         },
       });
+      mockDataManager.getApplicationsForCase.mockResolvedValue([
+        createMockApplication({
+          id: "application-pending-1",
+          caseId: "case-edit-1",
+          status: APPLICATION_STATUS.Pending,
+          applicationDate: "2026-03-01",
+        }),
+      ]);
       mockDataManager.updateCompleteCase.mockResolvedValue(savedCase);
       const { result } = renderIntakeHook({ existingCase });
 
@@ -642,7 +982,19 @@ describe("useIntakeWorkflow", () => {
           relationships: [{ type: "Spouse", name: "Jamie Smith", phone: "5550001111" }],
         }),
       });
+      mockDataManager.getApplicationsForCase.mockResolvedValue([
+        createMockApplication({
+          id: "application-pending-1",
+          caseId: "case-edit-1",
+          status: APPLICATION_STATUS.Pending,
+          applicationDate: "2026-03-01",
+        }),
+      ]);
       const { result } = renderIntakeHook({ existingCase });
+
+      await waitFor(() => {
+        expect(result.current.areApplicationFieldsDisabled).toBe(false);
+      });
 
       act(() => {
         result.current.updateField("firstName", "Edited");
@@ -732,6 +1084,275 @@ describe("useIntakeWorkflow", () => {
       );
       expect(mockDataManager.updateCompleteCase).not.toHaveBeenCalled();
       expect(mockDataManager.createCompleteCase).not.toHaveBeenCalled();
+    });
+
+    it("preserves locked application-owned fields when submitting a terminal-only edit", async () => {
+      // Arrange
+      const existingCase = createMockStoredCase({
+        id: "case-edit-1",
+        caseRecord: {
+          ...createMockStoredCase().caseRecord,
+          personId: "person-edit-1",
+          applicationDate: "2026-02-15",
+          applicationType: "Renewal",
+          withWaiver: true,
+          retroRequested: "2026-01-01",
+          appValidated: true,
+          agedDisabledVerified: true,
+          citizenshipVerified: true,
+          residencyVerified: true,
+          avsConsentDate: "2026-02-16",
+          voterFormStatus: "requested",
+          retroMonths: ["Jan", "Feb"],
+          status: "Approved" as CaseStatus,
+        },
+        person: createMockPerson({
+          id: "person-edit-1",
+          firstName: "Existing",
+          lastName: "Applicant",
+          name: "Existing Applicant",
+          phone: "5551234567",
+          ssn: "",
+        }),
+      });
+      mockDataManager.getApplicationsForCase.mockResolvedValue([
+        createMockApplication({
+          id: "application-terminal-1",
+          caseId: "case-edit-1",
+          status: APPLICATION_STATUS.Approved,
+          applicationDate: "2026-02-15",
+        }),
+      ]);
+      const { result } = renderIntakeHook({ existingCase });
+
+      await waitFor(() => {
+        expect(result.current.areApplicationFieldsDisabled).toBe(true);
+      });
+
+      act(() => {
+        result.current.updateField("firstName", "Edited");
+        result.current.updateField("lastName", "Applicant");
+        result.current.updateField("mcn", "MCN-EDITED");
+        result.current.updateField("applicationDate", "2026-09-09");
+        result.current.updateField("applicationType", "Change Report");
+        result.current.updateField("withWaiver", false);
+        result.current.updateField("retroRequested", "2026-09-01");
+        result.current.updateField("appValidated", false);
+        result.current.updateField("agedDisabledVerified", false);
+        result.current.updateField("citizenshipVerified", false);
+        result.current.updateField("residencyVerified", false);
+        result.current.updateField("avsConsentDate", "2026-09-10");
+        result.current.updateField("voterFormStatus", "declined");
+      });
+
+      // Act
+      await act(async () => {
+        await result.current.submit();
+      });
+
+      // Assert
+      expect(mockDataManager.updateCompleteCase).toHaveBeenCalledWith(
+        "case-edit-1",
+        expect.objectContaining({
+          caseRecord: expect.objectContaining({
+            applicationDate: "2026-02-15",
+            applicationType: "Renewal",
+            withWaiver: true,
+            retroRequested: "2026-01-01",
+            appValidated: true,
+            agedDisabledVerified: true,
+            citizenshipVerified: true,
+            residencyVerified: true,
+            avsConsentDate: "2026-02-16",
+            voterFormStatus: "requested",
+            retroMonths: ["Jan", "Feb"],
+            status: "Approved",
+          }),
+        }),
+      );
+    });
+
+    it("allows clearing the AVS consent date during an editable intake edit", async () => {
+      // Arrange
+      const existingCase = createMockStoredCase({
+        id: "case-edit-1",
+        caseRecord: {
+          ...createMockStoredCase().caseRecord,
+          personId: "person-edit-1",
+          avsConsentDate: "2026-02-16",
+        },
+        person: createMockPerson({
+          id: "person-edit-1",
+          firstName: "Existing",
+          lastName: "Applicant",
+          name: "Existing Applicant",
+          phone: "5551234567",
+          ssn: "",
+        }),
+      });
+      mockDataManager.getApplicationsForCase.mockResolvedValue([
+        createMockApplication({
+          id: "application-pending-1",
+          caseId: "case-edit-1",
+          status: APPLICATION_STATUS.Pending,
+          applicationDate: "2026-02-15",
+        }),
+      ]);
+      const { result } = renderIntakeHook({ existingCase });
+
+      await waitFor(() => {
+        expect(result.current.areApplicationFieldsDisabled).toBe(false);
+      });
+
+      act(() => {
+        result.current.updateField("firstName", "Edited");
+        result.current.updateField("lastName", "Applicant");
+        result.current.updateField("mcn", "MCN-EDITED");
+        result.current.updateField("applicationDate", "2026-02-15");
+        result.current.updateField("avsConsentDate", "");
+      });
+
+      // Act
+      await act(async () => {
+        await result.current.submit();
+      });
+
+      // Assert
+      expect(mockDataManager.updateCompleteCase).toHaveBeenCalledWith(
+        "case-edit-1",
+        expect.objectContaining({
+          caseRecord: expect.objectContaining({
+            avsConsentDate: "",
+          }),
+        }),
+      );
+    });
+
+    it("refreshes the locked-field preservation source when same-case data changes", async () => {
+      // Arrange
+      const existingCase = createMockStoredCase({
+        id: "case-edit-1",
+        caseRecord: {
+          ...createMockStoredCase().caseRecord,
+          personId: "person-edit-1",
+          applicationDate: "2026-02-15",
+          applicationType: "Stale Renewal",
+          withWaiver: true,
+          retroRequested: "2026-01-01",
+          appValidated: true,
+          agedDisabledVerified: true,
+          citizenshipVerified: true,
+          residencyVerified: true,
+          avsConsentDate: "2026-02-16",
+          voterFormStatus: "requested",
+          retroMonths: ["Jan", "Feb"],
+          status: "Approved" as CaseStatus,
+        },
+        person: createMockPerson({
+          id: "person-edit-1",
+          firstName: "Existing",
+          lastName: "Applicant",
+          name: "Existing Applicant",
+          phone: "5551234567",
+          ssn: "",
+        }),
+      });
+      const refreshedCase = createMockStoredCase({
+        ...existingCase,
+        updatedAt: "2026-04-08T12:34:56.000Z",
+        caseRecord: {
+          ...existingCase.caseRecord,
+          applicationDate: "2026-03-01",
+          applicationType: "Fresh Canonical Value",
+          withWaiver: false,
+          retroRequested: "2026-02-01",
+          appValidated: false,
+          agedDisabledVerified: false,
+          citizenshipVerified: false,
+          residencyVerified: false,
+          avsConsentDate: "2026-03-02",
+          voterFormStatus: "declined",
+          retroMonths: ["Mar"],
+        },
+      });
+
+      mockDataManager.getApplicationsForCase
+        .mockResolvedValueOnce([
+          createMockApplication({
+            id: "application-terminal-1",
+            caseId: "case-edit-1",
+            status: APPLICATION_STATUS.Approved,
+            applicationDate: "2026-02-15",
+          }),
+        ])
+        .mockResolvedValueOnce([
+          createMockApplication({
+            id: "application-terminal-2",
+            caseId: "case-edit-1",
+            status: APPLICATION_STATUS.Approved,
+            applicationDate: "2026-03-01",
+          }),
+        ]);
+      mockDataManager.getCaseById
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce(refreshedCase);
+
+      const { result, rerender } = renderHook(
+        ({ activeCase }) => useIntakeWorkflow({ existingCase: activeCase }),
+        { initialProps: { activeCase: existingCase } },
+      );
+
+      await waitFor(() => {
+        expect(result.current.areApplicationFieldsDisabled).toBe(true);
+      });
+
+      // Act
+      mockDataChangeCount.value = 1;
+      rerender({ activeCase: existingCase });
+
+      await waitFor(() => {
+        expect(mockDataManager.getCaseById).toHaveBeenLastCalledWith("case-edit-1");
+      });
+
+      act(() => {
+        result.current.updateField("firstName", "Edited");
+        result.current.updateField("lastName", "Applicant");
+        result.current.updateField("mcn", "MCN-EDITED");
+        result.current.updateField("applicationDate", "2026-09-09");
+        result.current.updateField("applicationType", "Change Report");
+        result.current.updateField("withWaiver", true);
+        result.current.updateField("retroRequested", "2026-09-01");
+        result.current.updateField("appValidated", true);
+        result.current.updateField("agedDisabledVerified", true);
+        result.current.updateField("citizenshipVerified", true);
+        result.current.updateField("residencyVerified", true);
+        result.current.updateField("avsConsentDate", "2026-09-10");
+        result.current.updateField("voterFormStatus", "requested");
+      });
+
+      await act(async () => {
+        await result.current.submit();
+      });
+
+      // Assert
+      expect(mockDataManager.updateCompleteCase).toHaveBeenCalledWith(
+        "case-edit-1",
+        expect.objectContaining({
+          caseRecord: expect.objectContaining({
+            applicationDate: "2026-03-01",
+            applicationType: "Fresh Canonical Value",
+            withWaiver: false,
+            retroRequested: "2026-02-01",
+            appValidated: false,
+            agedDisabledVerified: false,
+            citizenshipVerified: false,
+            residencyVerified: false,
+            avsConsentDate: "2026-03-02",
+            voterFormStatus: "declined",
+            retroMonths: ["Mar"],
+          }),
+        }),
+      );
     });
 
     it("trims required identity fields before saving", async () => {

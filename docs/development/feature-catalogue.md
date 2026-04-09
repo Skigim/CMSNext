@@ -172,7 +172,7 @@ Maintained by the storage + autosave working group. Align telemetry follow-ups w
 
 Core case CRUD is highly mature. March 2026 completed the normalized people hydration milestone, and the audited April follow-through confirmed that existing-person reuse and relationship-driven household rendering are already live in the intake and case-details UI. The remaining narrow limitation is that intake edit does not yet support reassigning the primary applicant to a different existing person.
 
-Week 2A of the v2.2 roadmap has now landed the domain-only application foundation: `Application` and `ApplicationStatusHistory` types, explicit field ownership for what migrates out of `CaseRecord`, and migration helpers that conservatively normalize legacy case-embedded application data. This is a model/migration milestone only; storage, service, and UI workflows still read and write the legacy case-embedded fields until the downstream wiring lands.
+The v2.2 application foundation now spans the domain, storage, and service layers: `Application` and `ApplicationStatusHistory` types are defined, migration helpers conservatively normalize legacy case-embedded application data, and canonical `applications[]` support is wired through storage plus `DataManager`/`ApplicationService`. Intake and case-view workflows still need UI integration, so user-facing create/edit flows continue to depend on legacy case-embedded application fields until that slice lands.
 
 **January 14, 2026:** Case details restructured to 2-column layout - IntakeColumn removed entirely with fields redistributed across PersonColumn (intake verification, relationships) and CaseColumn (application validated, AVS/voter fields, reviews). Internal 3-column grids optimize space utilization. Retro months input appears directly below retro requested checkbox for logical grouping.
 
@@ -202,6 +202,7 @@ Week 2A of the v2.2 roadmap has now landed the domain-only application foundatio
 - **Existing Person Reuse in Intake**: New intake flows can search for and reuse existing applicant and household person records instead of always creating duplicates
 - **Relationship-Driven Household Rendering**: Case details and intake hydration render household links from normalized relationship data rather than legacy embedded payload assumptions
 - **Application Domain Foundation**: Week 2A introduced normalized application domain types plus migration helpers that define which intake/application fields move out of `CaseRecord` and how legacy records seed an initial pending status history
+- **Application Storage + Service Wiring**: Canonical `applications[]` support is now wired through storage migration helpers, `FileStorageService`, `DataManager`, and `ApplicationService` so the data layer can persist and manage application records independently of the case shell
 - **Import/Export**: Bulk operations with duplicate detection and progress indicators
 - **Autosave Integration**: Forms seamlessly integrate with AutosaveFileService for reliable persistence
 - **Filter/Sort Persistence**: Case list preferences saved to localStorage with reset button
@@ -210,7 +211,7 @@ Week 2A of the v2.2 roadmap has now landed the domain-only application foundatio
 ### Gaps / Risks
 
 - Intake edit cannot yet reassign the primary applicant to a different existing person
-- Application lifecycle data is still persisted and edited through legacy case-embedded fields until Week 3 storage/service work and Week 4 UI wiring land
+- Application lifecycle data now has canonical storage and service support, but intake and case-detail editing still rely on legacy case-embedded fields until the UI integration slice lands
 - Cross-case shared-person propagation is implemented through the shared people registry, but the suite would benefit from one direct regression test proving that behavior across multiple linked cases
 - Accessibility audits for complex forms remain ad hoc
 

@@ -7,6 +7,7 @@ import { ActivityLogService } from './ActivityLogService';
 import { formatCaseDisplayName } from '../../domain/cases/formatting';
 import { createLogger } from '../logger';
 import { resolveNoteCategories } from '../noteCategories';
+import { syncRuntimeApplications } from '@/utils/storageV21Migration';
 import type { AlertWithMatch } from '@/domain/alerts';
 
 const logger = createLogger('CaseBulkOperationsService');
@@ -80,6 +81,141 @@ export class CaseBulkOperationsService {
     this.fileStorage = config.fileStorage;
   }
 
+  private async readCurrentDataOrThrow(): Promise<NormalizedFileData> {
+    const currentData = await this.fileStorage.readFileData();
+    if (!currentData) {
+      throw new Error('Failed to read current data');
+    }
+
+    return currentData;
+  }
+
+  private getExistingCaseIds(cases: StoredCase[]): Set<string> {
+    return new Set(cases.map((caseItem) => caseItem.id));
+  }
+
+  private getNotFoundCaseIds(existingIds: Set<string>, requestedIds: string[]): string[] {
+    return requestedIds.filter((caseId) => !existingIds.has(caseId));
+  }
+
+  private touchUpdatedCases(
+    cases: StoredCase[],
+    changedCaseIds: string[],
+    timestamp: string,
+  ): StoredCase[] {
+    return this.fileStorage.touchCaseTimestamps(cases, changedCaseIds, timestamp);
+  }
+
+  private async prepareBulkCaseUpdates(
+    caseIds: string[],
+    buildChange: (
+      caseItem: StoredCase,
+      timestamp: string,
+    ) => { updatedCase: StoredCase; activityEntry: CaseActivityEntry } | null,
+  ): Promise<{
+    currentData: NormalizedFileData;
+    casesWithTouchedTimestamps: StoredCase[];
+    updatedCases: StoredCase[];
+    activityEntries: CaseActivityEntry[];
+    notFound: string[];
+    timestamp: string;
+  }> {
+    const currentData = await this.readCurrentDataOrThrow();
+    const idsToUpdate = new Set(caseIds);
+    const timestamp = new Date().toISOString();
+    const updatedCases: StoredCase[] = [];
+    const changedCaseIds: string[] = [];
+    const activityEntries: CaseActivityEntry[] = [];
+    const existingIds = this.getExistingCaseIds(currentData.cases);
+    const notFound = this.getNotFoundCaseIds(existingIds, caseIds);
+
+    const casesWithChanges = currentData.cases.map((caseItem) => {
+      if (!idsToUpdate.has(caseItem.id)) {
+        return caseItem;
+      }
+
+      const change = buildChange(caseItem, timestamp);
+      if (!change) {
+        updatedCases.push(caseItem);
+        return caseItem;
+      }
+
+      updatedCases.push(change.updatedCase);
+      changedCaseIds.push(caseItem.id);
+      activityEntries.push(change.activityEntry);
+
+      return change.updatedCase;
+    });
+
+    return {
+      currentData,
+      casesWithTouchedTimestamps: this.touchUpdatedCases(
+        casesWithChanges,
+        changedCaseIds,
+        timestamp,
+      ),
+      updatedCases,
+      activityEntries,
+      notFound,
+      timestamp,
+    };
+  }
+
+  private async writePreparedBulkCaseUpdates(
+    caseIds: string[],
+    buildChange: (
+      caseItem: StoredCase,
+      timestamp: string,
+    ) => { updatedCase: StoredCase; activityEntry: CaseActivityEntry } | null,
+    options: {
+      syncApplications?: (currentData: NormalizedFileData, cases: StoredCase[], timestamp: string) => NormalizedFileData['applications'];
+    } = {},
+  ): Promise<{ updated: StoredCase[]; notFound: string[] }> {
+    const {
+      currentData,
+      casesWithTouchedTimestamps,
+      updatedCases,
+      activityEntries,
+      notFound,
+      timestamp,
+    } = await this.prepareBulkCaseUpdates(caseIds, buildChange);
+
+    const updatedData: NormalizedFileData = {
+      ...currentData,
+      cases: casesWithTouchedTimestamps,
+      activityLog: ActivityLogService.mergeActivityEntries(currentData.activityLog, activityEntries),
+    };
+
+    if (options.syncApplications) {
+      updatedData.applications = options.syncApplications(
+        currentData,
+        casesWithTouchedTimestamps,
+        timestamp,
+      );
+    }
+
+    await this.fileStorage.writeNormalizedData(updatedData);
+
+    return { updated: updatedCases, notFound };
+  }
+
+  private async performBulkCaseUpdate(
+    caseIds: string[],
+    buildChange: (
+      caseItem: StoredCase,
+      timestamp: string,
+    ) => { updatedCase: StoredCase; activityEntry: CaseActivityEntry } | null,
+    options: {
+      syncApplications?: (currentData: NormalizedFileData, cases: StoredCase[], timestamp: string) => NormalizedFileData['applications'];
+    } = {},
+  ) {
+    if (caseIds.length === 0) {
+      return { updated: [], notFound: [] };
+    }
+
+    return await this.writePreparedBulkCaseUpdates(caseIds, buildChange, options);
+  }
+
   // =============================================================================
   // BULK DELETE OPERATIONS
   // =============================================================================
@@ -111,21 +247,19 @@ export class CaseBulkOperationsService {
     }
 
     // Read current data
-    const currentData = await this.fileStorage.readFileData();
-    if (!currentData) {
-      throw new Error('Failed to read current data');
-    }
+    const currentData = await this.readCurrentDataOrThrow();
 
     const idsToDelete = new Set(caseIds);
-    const existingIds = new Set(currentData.cases.map(c => c.id));
+    const existingIds = this.getExistingCaseIds(currentData.cases);
     
     // Track which IDs don't exist
-    const notFound = caseIds.filter(id => !existingIds.has(id));
+    const notFound = this.getNotFoundCaseIds(existingIds, caseIds);
     
     // Filter out cases and their associated data (including alerts)
     const updatedData: NormalizedFileData = {
       ...currentData,
       cases: currentData.cases.filter(c => !idsToDelete.has(c.id)),
+      applications: currentData.applications?.filter(a => !idsToDelete.has(a.caseId)),
       financials: currentData.financials.filter(f => !idsToDelete.has(f.caseId)),
       notes: currentData.notes.filter(n => !idsToDelete.has(n.caseId)),
       alerts: currentData.alerts.filter(a => !a.caseId || !idsToDelete.has(a.caseId)),
@@ -169,85 +303,51 @@ export class CaseBulkOperationsService {
    * }
    */
   async updateCasesStatus(caseIds: string[], status: CaseStatus): Promise<{ updated: StoredCase[]; notFound: string[] }> {
-    if (caseIds.length === 0) {
-      return { updated: [], notFound: [] };
-    }
-
-    const currentData = await this.fileStorage.readFileData();
-    if (!currentData) {
-      throw new Error("Failed to read current data");
-    }
-
-    const idsToUpdate = new Set(caseIds);
-    const timestamp = new Date().toISOString();
-    const updatedCases: StoredCase[] = [];
-    const activityEntries: CaseActivityEntry[] = [];
-    const notFound: string[] = [];
-
-    // Track which IDs exist
-    const existingIds = new Set(currentData.cases.map(c => c.id));
-    caseIds.forEach(id => {
-      if (!existingIds.has(id)) {
-        notFound.push(id);
-      }
-    });
-
-    // Update matching cases
-    const casesWithChanges = currentData.cases.map(c => {
-      if (!idsToUpdate.has(c.id)) {
-        return c;
-      }
-
-      const currentStatus = c.caseRecord?.status ?? c.status;
-      
-      // Skip if status is already the same
+    return await this.performBulkCaseUpdate(
+      caseIds,
+      (caseItem, transactionTimestamp) => {
+      const currentStatus = caseItem.caseRecord?.status ?? caseItem.status;
       if (currentStatus === status) {
-        updatedCases.push(c);
-        return c;
+        return null;
       }
 
       const updatedCase: StoredCase = {
-        ...c,
+        ...caseItem,
         status,
         caseRecord: {
-          ...c.caseRecord,
+          ...caseItem.caseRecord,
           status,
-          updatedDate: timestamp,
+          updatedDate: transactionTimestamp,
         },
       };
 
-      updatedCases.push(updatedCase);
-
-      // Create activity log entry using factory method
-      activityEntries.push(
-        ActivityLogService.createStatusChangeEntry({
-          caseId: c.id,
-          caseName: formatCaseDisplayName(c),
-          caseMcn: c.caseRecord?.mcn ?? c.mcn ?? null,
+      return {
+        updatedCase,
+        activityEntry: ActivityLogService.createStatusChangeEntry({
+          caseId: caseItem.id,
+          caseName: formatCaseDisplayName(caseItem),
+          caseMcn: caseItem.caseRecord?.mcn ?? caseItem.mcn ?? null,
           fromStatus: currentStatus,
           toStatus: status,
-          timestamp,
-        })
-      );
-
-      return updatedCase;
-    });
-
-    const casesWithTouchedTimestamps = this.fileStorage.touchCaseTimestamps(
-      casesWithChanges,
-      caseIds.filter(id => existingIds.has(id))
+          timestamp: transactionTimestamp,
+        }),
+      };
+      },
+      {
+        syncApplications: (currentData, casesWithTouchedTimestamps, timestamp) =>
+          syncRuntimeApplications(
+            {
+              ...currentData,
+              cases: casesWithTouchedTimestamps,
+            },
+            {
+              preferRuntimeCaseFields: true,
+              syncMode: 'status-only',
+              transactionTimestamp: timestamp,
+            },
+          ).applications,
+      },
     );
-
-    // Write updated data
-    const updatedData: NormalizedFileData = {
-      ...currentData,
-      cases: casesWithTouchedTimestamps,
-      activityLog: ActivityLogService.mergeActivityEntries(currentData.activityLog, activityEntries),
-    };
-
-    await this.fileStorage.writeNormalizedData(updatedData);
-
-    return { updated: updatedCases, notFound };
   }
 
   /**
@@ -273,87 +373,38 @@ export class CaseBulkOperationsService {
    * console.log(`Marked ${result.updated.length} cases as priority`);
    */
   async updateCasesPriority(caseIds: string[], priority: boolean): Promise<{ updated: StoredCase[]; notFound: string[] }> {
-    if (caseIds.length === 0) {
-      return { updated: [], notFound: [] };
-    }
-
-    const currentData = await this.fileStorage.readFileData();
-    if (!currentData) {
-      throw new Error("Failed to read current data");
-    }
-
-    const idsToUpdate = new Set(caseIds);
-    const timestamp = new Date().toISOString();
-    const updatedCases: StoredCase[] = [];
-    const activityEntries: CaseActivityEntry[] = [];
-    const notFound: string[] = [];
-
-    // Track which IDs exist
-    const existingIds = new Set(currentData.cases.map(c => c.id));
-    caseIds.forEach(id => {
-      if (!existingIds.has(id)) {
-        notFound.push(id);
-      }
-    });
-
-    // Update matching cases
-    const casesWithChanges = currentData.cases.map(c => {
-      if (!idsToUpdate.has(c.id)) {
-        return c;
-      }
-
-      const currentPriority = c.priority ?? false;
-      
-      // Skip if priority is already the same
+    return await this.performBulkCaseUpdate(caseIds, (caseItem, transactionTimestamp) => {
+      const currentPriority = caseItem.priority ?? false;
       if (currentPriority === priority) {
-        updatedCases.push(c);
-        return c;
+        return null;
       }
 
       const updatedCase: StoredCase = {
-        ...c,
+        ...caseItem,
         priority,
         caseRecord: {
-          ...c.caseRecord,
+          ...caseItem.caseRecord,
           priority,
-          updatedDate: timestamp,
+          updatedDate: transactionTimestamp,
         },
       };
 
-      updatedCases.push(updatedCase);
-
-      // Create activity log entry
-      activityEntries.push({
-        id: uuidv4(),
-        timestamp,
-        caseId: c.id,
-        caseName: formatCaseDisplayName(c),
-        caseMcn: c.caseRecord?.mcn ?? c.mcn ?? null,
-        type: "priority-change",
-        payload: {
-          fromPriority: currentPriority,
-          toPriority: priority,
+      return {
+        updatedCase,
+        activityEntry: {
+          id: uuidv4(),
+          timestamp: transactionTimestamp,
+          caseId: caseItem.id,
+          caseName: formatCaseDisplayName(caseItem),
+          caseMcn: caseItem.caseRecord?.mcn ?? caseItem.mcn ?? null,
+          type: "priority-change",
+          payload: {
+            fromPriority: currentPriority,
+            toPriority: priority,
+          },
         },
-      });
-
-      return updatedCase;
+      };
     });
-
-    const casesWithTouchedTimestamps = this.fileStorage.touchCaseTimestamps(
-      casesWithChanges,
-      caseIds.filter(id => existingIds.has(id))
-    );
-
-    // Write updated data
-    const updatedData: NormalizedFileData = {
-      ...currentData,
-      cases: casesWithTouchedTimestamps,
-      activityLog: ActivityLogService.mergeActivityEntries(currentData.activityLog, activityEntries),
-    };
-
-    await this.fileStorage.writeNormalizedData(updatedData);
-
-    return { updated: updatedCases, notFound };
   }
 
   // =============================================================================
@@ -390,15 +441,12 @@ export class CaseBulkOperationsService {
    */
   async importCases(cases: StoredCase[]): Promise<void> {
     // Read current data
-    const currentData = await this.fileStorage.readFileData();
-    if (!currentData) {
-      throw new Error('Failed to read current data');
-    }
+    const currentData = await this.readCurrentDataOrThrow();
 
     const timestamp = new Date().toISOString();
 
     // Build set of existing case IDs to detect duplicates
-    const existingIds = new Set(currentData.cases.map(c => c.id));
+    const existingIds = this.getExistingCaseIds(currentData.cases);
 
     // Validate, ensure unique IDs, and filter out duplicates
     const casesToImport = cases
@@ -426,7 +474,11 @@ export class CaseBulkOperationsService {
 
     const touchedCaseIds = casesToImport.map(caseItem => caseItem.id);
     const combinedCases = [...currentData.cases, ...casesToImport];
-    const casesWithTouchedTimestamps = this.fileStorage.touchCaseTimestamps(combinedCases, touchedCaseIds);
+    const casesWithTouchedTimestamps = this.touchUpdatedCases(
+      combinedCases,
+      touchedCaseIds,
+      timestamp,
+    );
 
     // Write updated data
     const updatedData: NormalizedFileData = {
@@ -515,10 +567,7 @@ export class CaseBulkOperationsService {
       return { resolvedCount: 0, caseCount: 0 };
     }
 
-    const currentData = await this.fileStorage.readFileData();
-    if (!currentData) {
-      throw new Error('Failed to read current data');
-    }
+    const currentData = await this.readCurrentDataOrThrow();
 
     const caseIdSet = new Set(caseIds);
     const timestamp = new Date().toISOString();
@@ -603,13 +652,10 @@ export class CaseBulkOperationsService {
       return { addedCount: 0 };
     }
 
-    const currentData = await this.fileStorage.readFileData();
-    if (!currentData) {
-      throw new Error('Failed to read current data');
-    }
+    const currentData = await this.readCurrentDataOrThrow();
 
     const timestamp = new Date().toISOString();
-    const existingCaseIds = new Set(currentData.cases.map(c => c.id));
+    const existingCaseIds = this.getExistingCaseIds(currentData.cases);
     const caseMap = new Map(currentData.cases.map(c => [c.id, c]));
 
     // Filter to only valid case IDs
@@ -662,9 +708,10 @@ export class CaseBulkOperationsService {
     });
 
     // Touch case timestamps
-    const casesWithTouchedTimestamps = this.fileStorage.touchCaseTimestamps(
+    const casesWithTouchedTimestamps = this.touchUpdatedCases(
       currentData.cases,
-      validCaseIds
+      validCaseIds,
+      timestamp,
     );
 
     // Write updated data

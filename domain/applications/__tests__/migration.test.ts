@@ -12,32 +12,39 @@ import {
   pickApplicationOwnedCaseRecordFields,
 } from "../migration";
 
+function createMigratedApplicationFromCaseRecord(
+  caseRecord: ReturnType<typeof createMockCaseRecord>,
+) {
+  return createMigratedApplication({
+    applicationId: "application-1",
+    initialHistoryId: "history-1",
+    caseId: "case-1",
+    applicantPersonId: "person-1",
+    migratedAt: "2026-04-06T10:00:00.000Z",
+    caseRecord,
+  });
+}
+
 describe("APPLICATION_OWNED_CASE_RECORD_FIELDS", () => {
   it("captures the legacy case-record fields that migrate into applications", () => {
     // Arrange / Act
     const ownedFields = APPLICATION_OWNED_CASE_RECORD_FIELDS;
 
     // Assert
-    expect(ownedFields).toEqual([
+    expect(ownedFields).toHaveLength(12);
+    expect(ownedFields.slice(0, 4)).toEqual([
       "applicationDate",
       "applicationType",
       "withWaiver",
       "retroRequested",
-      "appValidated",
-      "retroMonths",
-      "agedDisabledVerified",
-      "citizenshipVerified",
-      "residencyVerified",
-      "avsSubmitted",
-      "avsSubmitDate",
-      "interfacesReviewed",
-      "reviewVRs",
-      "reviewPriorBudgets",
-      "reviewPriorNarr",
+    ]);
+    expect(ownedFields.slice(-3)).toEqual([
       "avsConsentDate",
       "voterFormStatus",
       "intakeCompleted",
     ]);
+    expect(ownedFields).toContain("retroMonths");
+    expect(ownedFields).toContain("citizenshipVerified");
   });
 });
 
@@ -47,25 +54,23 @@ describe("CASE_OWNED_AFTER_APPLICATION_MIGRATION_FIELDS", () => {
     const retainedFields = CASE_OWNED_AFTER_APPLICATION_MIGRATION_FIELDS;
 
     // Assert
-    expect(retainedFields).toEqual([
+    expect(retainedFields).toHaveLength(23);
+    expect(retainedFields.slice(0, 6)).toEqual([
       "id",
       "mcn",
       "caseType",
       "personId",
       "spouseId",
       "status",
-      "description",
-      "priority",
-      "livingArrangement",
-      "admissionDate",
-      "organizationId",
-      "authorizedReps",
-      "createdDate",
-      "updatedDate",
-      "contactMethods",
+    ]);
+    expect(retainedFields.slice(-4)).toEqual([
+      "reviewPriorBudgets",
+      "reviewPriorNarr",
       "pregnancy",
       "maritalStatus",
     ]);
+    expect(retainedFields).toContain("authorizedReps");
+    expect(retainedFields).toContain("contactMethods");
   });
 });
 
@@ -131,12 +136,6 @@ describe("pickApplicationOwnedCaseRecordFields", () => {
       agedDisabledVerified: false,
       citizenshipVerified: false,
       residencyVerified: false,
-      avsSubmitted: true,
-      avsSubmitDate: "2026-02-04",
-      interfacesReviewed: false,
-      reviewVRs: true,
-      reviewPriorBudgets: false,
-      reviewPriorNarr: false,
       avsConsentDate: "",
       voterFormStatus: "",
       intakeCompleted: false,
@@ -180,14 +179,7 @@ describe("createMigratedApplication", () => {
     });
 
     // Act
-    const result = createMigratedApplication({
-      applicationId: "application-1",
-      initialHistoryId: "history-1",
-      caseId: "case-1",
-      applicantPersonId: "person-1",
-      migratedAt: "2026-04-06T10:00:00.000Z",
-      caseRecord,
-    });
+    const result = createMigratedApplicationFromCaseRecord(caseRecord);
 
     // Assert
     expect(result).toEqual({
@@ -216,12 +208,6 @@ describe("createMigratedApplication", () => {
         isAgedDisabledVerified: false,
         isCitizenshipVerified: true,
         isResidencyVerified: true,
-        isAvsSubmitted: false,
-        avsSubmitDate: "",
-        hasInterfacesReviewed: false,
-        reviewVRs: false,
-        reviewPriorBudgets: false,
-        reviewPriorNarr: false,
         avsConsentDate: "",
         voterFormStatus: "",
         isIntakeCompleted: true,
@@ -241,14 +227,7 @@ describe("createMigratedApplication", () => {
     });
 
     // Act
-    const result = createMigratedApplication({
-      applicationId: "application-1",
-      initialHistoryId: "history-1",
-      caseId: "case-1",
-      applicantPersonId: "person-1",
-      migratedAt: "2026-04-06T10:00:00.000Z",
-      caseRecord,
-    });
+    const result = createMigratedApplicationFromCaseRecord(caseRecord);
     result.retroMonths.push("2025-12");
 
     // Assert

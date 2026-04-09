@@ -5,7 +5,7 @@
 **Tests:** 1141/1141 passing ✅  
 **Build:** Production-ready ✅  
 **Average Feature Rating:** 85.5/100  
-**Status:** In progress | Week 2A domain slice landed | Intake & Application Layer
+**Status:** In progress | Application storage/service slice landed early | Intake & Application Layer
 
 ---
 
@@ -55,7 +55,7 @@
 
 #### First Clean Slice: Week 2A - Application Model & Migration Design
 
-Status on `feat/application-domain-week2a`: the domain/model slice is landed; storage persistence, `DataManager`/service wiring, and UI integration remain downstream.
+Status on `feat/application-domain-week2a`: the domain/model slice is landed, and the downstream storage persistence plus `DataManager`/service wiring have already merged. Intake and case-view UI integration remain downstream.
 
 - [x] Lock the `Application` entity boundary before touching storage wiring or UI flows.
 - [x] Define `ApplicationStatusHistory` as the canonical status timeline model for v2.2.
@@ -176,7 +176,7 @@ This roadmap reflects our accelerated development pace with direct AI assistance
 
 - **Traditional estimate:** 1-2 features per week
 - **AI-assisted reality:** 3-4 features per week with full test coverage
-- **April target:** close out the remaining v2.1 documentation and decision work, land the Week 2A application-domain foundation, then finish the v2.2 storage, service-layer, and initial UI integration slices
+- **April target:** close out the remaining v2.1 documentation and decision work, reflect the landed v2.2 application-domain plus storage/service slice accurately, then finish the initial UI integration and end-to-end regression coverage
 
 ### Quality Gates
 
@@ -190,9 +190,9 @@ Every feature must:
 
 ### Recommended Next Step
 
-Carry the landed Week 2A domain slice into Week 3 by wiring persisted `applications[]` support through storage, `DataManager`, and the service layer before any intake/UI changes begin.
+Start the Week 4 prep and UI integration slice: inventory every intake and case-view surface that still reads or writes legacy case-embedded application fields, define the minimum viable application-status UI for the single-program workflow, then wire those flows onto normalized `applications[]` records before broad end-to-end regression work begins.
 
 ---
 
 **Prepared by:** GitHub Copilot  
-**Last updated:** April 7, 2026
+**Last updated:** April 8, 2026

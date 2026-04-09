@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   generateDailyActivityReport,
   serializeDailyActivityReport,
+  toActivityDateKey,
 } from "@/utils/activityReport";
 import type {
   CaseActivityEntry,
@@ -258,5 +259,12 @@ describe("generateDailyActivityReport", () => {
         entries: [noteEntry, applicationStatusChangeEntry],
       },
     ]);
+  });
+
+  it("rejects impossible calendar dates instead of rolling them forward", () => {
+    // ARRANGE / ACT / ASSERT
+    expect(() => toActivityDateKey("2025-02-30")).toThrow(
+      "Invalid date provided to toActivityDateKey",
+    );
   });
 });
