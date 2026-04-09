@@ -4,9 +4,14 @@ import { mergeCategoryConfig } from "@/types/categoryConfig";
 import {
   dehydrateNormalizedData,
   hydrateNormalizedData,
+  hydratePersistedNormalizedDataV21ForUpgrade,
   isPersistedNormalizedFileDataV20,
+  isPersistedNormalizedFileDataV21,
+  isPersistedNormalizedFileDataV22,
   migrateV20ToV21,
+  migrateV21ToV22,
   type PersistedNormalizedFileDataV21,
+  type PersistedNormalizedFileDataV22,
 } from "@/utils/storageV21Migration";
 import { isCaseArchiveData, parseArchiveYear } from "@/types/archive";
 import {
@@ -18,6 +23,7 @@ export const MAIN_WORKSPACE_FILE_NAME = "case-tracker-data.json";
 
 export type WorkspaceMigrationDisposition =
   | "already-v2.1"
+  | "already-current"
   | "migrated"
   | "failed"
   | "skipped";
@@ -52,6 +58,12 @@ export interface WorkspaceMigrationReport {
 }
 
 export interface PersistedCaseArchiveDataV21 extends PersistedNormalizedFileDataV21 {
+  archiveType: "cases";
+  archiveYear: number;
+  archivedAt: string;
+}
+
+export interface PersistedCaseArchiveDataV22 extends PersistedNormalizedFileDataV22 {
   archiveType: "cases";
   archiveYear: number;
   archivedAt: string;
@@ -98,7 +110,7 @@ export function summarizeUnknownCounts(data: unknown): WorkspaceMigrationCounts 
 }
 
 export function isPersistedCaseArchiveDataV21(data: unknown): data is PersistedCaseArchiveDataV21 {
-  if (!isNormalizedFileData(data)) {
+  if (!isPersistedNormalizedFileDataV21(data)) {
     return false;
   }
 
@@ -125,7 +137,59 @@ function cloneArchiveCases(cases: CaseArchiveData["cases"]): CaseArchiveData["ca
 
 export function buildPersistedArchiveDataV21(archiveData: CaseArchiveData): PersistedCaseArchiveDataV21 {
   const runtimeNormalizedData: NormalizedFileData = {
+    version: "2.2",
+    people: [],
+    cases: cloneArchiveCases(archiveData.cases),
+    financials: archiveData.financials.map((financial) => ({ ...financial })),
+    notes: archiveData.notes.map((note) => ({ ...note })),
+    alerts: [],
+    exported_at: archiveData.archivedAt,
+    total_cases: archiveData.cases.length,
+    categoryConfig: mergeCategoryConfig(),
+    activityLog: [],
+  };
+
+  const persistedData = dehydrateNormalizedData(runtimeNormalizedData);
+
+  return {
+    ...persistedData,
     version: "2.1",
+    archiveType: "cases",
+    archiveYear: archiveData.archiveYear,
+    archivedAt: archiveData.archivedAt,
+  };
+}
+
+export function hydratePersistedArchiveDataV21(data: PersistedCaseArchiveDataV21): CaseArchiveData {
+  const hydratedData = hydratePersistedNormalizedDataV21ForUpgrade(data);
+
+  return {
+    version: "1.0",
+    archiveType: "cases",
+    archivedAt: data.archivedAt,
+    archiveYear: data.archiveYear,
+    cases: hydratedData.cases,
+    financials: hydratedData.financials,
+    notes: hydratedData.notes,
+  };
+}
+
+export function isPersistedCaseArchiveDataV22(data: unknown): data is PersistedCaseArchiveDataV22 {
+  if (!isPersistedNormalizedFileDataV22(data)) {
+    return false;
+  }
+
+  const candidate = data as unknown as Record<string, unknown>;
+  return (
+    candidate.archiveType === "cases" &&
+    typeof candidate.archivedAt === "string" &&
+    typeof candidate.archiveYear === "number"
+  );
+}
+
+export function buildPersistedArchiveDataV22(archiveData: CaseArchiveData): PersistedCaseArchiveDataV22 {
+  const runtimeNormalizedData: NormalizedFileData = {
+    version: "2.2",
     people: [],
     cases: cloneArchiveCases(archiveData.cases),
     financials: archiveData.financials.map((financial) => ({ ...financial })),
@@ -147,7 +211,7 @@ export function buildPersistedArchiveDataV21(archiveData: CaseArchiveData): Pers
   };
 }
 
-export function hydratePersistedArchiveDataV21(data: PersistedCaseArchiveDataV21): CaseArchiveData {
+export function hydratePersistedArchiveDataV22(data: PersistedCaseArchiveDataV22): CaseArchiveData {
   const hydratedData = hydrateNormalizedData(data);
 
   return {
@@ -303,7 +367,7 @@ export function validatePersistedV21Data(
       // At this point the required root collections/metadata exist and every
       // case/person link has passed explicit integrity checks, so hydration is
       // safe to use as the final canonical validation step.
-      hydrateNormalizedData(data as PersistedNormalizedFileDataV21);
+      hydratePersistedNormalizedDataV21ForUpgrade(data as PersistedNormalizedFileDataV21);
     } catch (error) {
       validationErrors.push(
         `Canonical hydration failed: ${error instanceof Error ? error.message : String(error)}`,
@@ -314,6 +378,37 @@ export function validatePersistedV21Data(
   return {
     counts,
     validationErrors,
+  };
+}
+
+export function validatePersistedV22Data(
+  data: unknown,
+): { counts: WorkspaceMigrationCounts; validationErrors: string[] } {
+  if (data === null || typeof data !== "object" || Array.isArray(data)) {
+    return {
+      counts: createEmptyMigrationCounts(),
+      validationErrors: ['Expected a persisted v2.2 object but found a non-object value.'],
+    };
+  }
+
+  const candidate = data as Record<string, unknown>;
+  const legacyValidation = validatePersistedV21Data({
+    ...candidate,
+    version: "2.1",
+  });
+  const filteredValidationErrors = legacyValidation.validationErrors.filter(
+    (error) => !error.startsWith('Expected version "2.1"'),
+  );
+
+  if (candidate.version !== "2.2") {
+    filteredValidationErrors.unshift(
+      `Expected version "2.2" but found "${String(candidate.version)}".`,
+    );
+  }
+
+  return {
+    counts: legacyValidation.counts,
+    validationErrors: filteredValidationErrors,
   };
 }
 
@@ -349,6 +444,7 @@ export function migrateArchiveDataToPersistedV21(
     return {
       data: {
         ...rawData,
+        version: "2.1",
         archiveType: "cases",
         archiveYear,
         archivedAt: rawData.exported_at,
@@ -390,6 +486,93 @@ export function migrateArchiveDataToPersistedV21(
   };
 }
 
+export function migrateArchiveDataToPersistedV22(
+  rawData: unknown,
+  fileName: string,
+): {
+  data: PersistedCaseArchiveDataV22 | null;
+  sourceVersion: string | null;
+  error: string | null;
+  needsWrite: boolean;
+} {
+  const archiveYear = parseArchiveYear(fileName);
+  if (archiveYear === null) {
+    return {
+      data: null,
+      sourceVersion: null,
+      error: `Unsupported archive file name: ${fileName}`,
+      needsWrite: false,
+    };
+  }
+
+  if (isPersistedCaseArchiveDataV22(rawData)) {
+    return {
+      data: rawData,
+      sourceVersion: rawData.version,
+      error: null,
+      needsWrite: false,
+    };
+  }
+
+  if (isPersistedCaseArchiveDataV21(rawData)) {
+    return {
+      data: {
+        ...migrateV21ToV22(rawData),
+        archiveType: "cases",
+        archiveYear,
+        archivedAt: rawData.archivedAt,
+      },
+      sourceVersion: rawData.version,
+      error: null,
+      needsWrite: true,
+    };
+  }
+
+  if (isNormalizedFileData(rawData)) {
+    return {
+      data: {
+        ...rawData,
+        archiveType: "cases",
+        archiveYear,
+        archivedAt: rawData.exported_at,
+      },
+      sourceVersion: rawData.version,
+      error: null,
+      needsWrite: true,
+    };
+  }
+
+  if (isPersistedNormalizedFileDataV20(rawData)) {
+    return {
+      data: {
+        ...migrateV21ToV22(migrateV20ToV21(rawData)),
+        archiveType: "cases",
+        archiveYear,
+        archivedAt: rawData.exported_at,
+      },
+      sourceVersion: rawData.version,
+      error: null,
+      needsWrite: true,
+    };
+  }
+
+  if (isCaseArchiveData(rawData)) {
+    return {
+      data: buildPersistedArchiveDataV22(rawData),
+      sourceVersion: rawData.version,
+      error: null,
+      needsWrite: true,
+    };
+  }
+
+  return {
+    data: null,
+    sourceVersion: null,
+    error: `Unsupported archive data format in ${fileName}.`,
+    needsWrite: false,
+  };
+}
+
 export function buildWorkspaceMigrationReport(
   files: WorkspaceMigrationFileReport[],
 ): WorkspaceMigrationReport {
@@ -398,7 +581,9 @@ export function buildWorkspaceMigrationReport(
     files,
     summary: {
       migrated: files.filter((file) => file.disposition === "migrated").length,
-      alreadyV21: files.filter((file) => file.disposition === "already-v2.1").length,
+      alreadyV21: files.filter(
+        (file) => file.disposition === "already-v2.1" || file.disposition === "already-current",
+      ).length,
       failed: files.filter((file) => file.disposition === "failed").length,
       skipped: files.filter((file) => file.disposition === "skipped").length,
     },

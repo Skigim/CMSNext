@@ -6,7 +6,13 @@ import type { FileStorageLifecycleSelectors } from '@/contexts/FileStorageContex
 import { mergeCategoryConfig } from '@/types/categoryConfig'
 import { createBlankHouseholdMemberData, normalizeHouseholdMemberDraft } from '@/domain/cases'
 import type { IntakeFormData } from '@/domain/validation/intake.schema'
-import { dehydrateNormalizedData, type NormalizedFileDataV20, type PersistedNormalizedFileDataV21 } from '@/utils/storageV21Migration'
+import {
+  dehydrateNormalizedData,
+  type NormalizedFileDataV20,
+  type PersistedNormalizedFileDataV21,
+  type PersistedNormalizedFileDataV22,
+  type RuntimeNormalizedFileDataV22,
+} from '@/utils/storageV21Migration'
 import type { DailyActivityReport, CaseActivityLogState } from '@/types/activityLog'
 import type { AlertWithMatch } from '@/utils/alertsData'
 import type { AppNavigationConfig } from '@/components/app/AppNavigationShell'
@@ -226,8 +232,7 @@ export const createMockStoredCase = (overrides: Partial<StoredCase> = {}): Store
 
 export const createMockNormalizedFileData = (
   overrides: Partial<NormalizedFileData> = {},
-): NormalizedFileData => ({
-  version: '2.1',
+): RuntimeNormalizedFileDataV22 => ({
   people: [],
   cases: [],
   applications: [],
@@ -236,6 +241,7 @@ export const createMockNormalizedFileData = (
   alerts: [],
   ...createBaseNormalizedMetadata(),
   ...overrides,
+  version: '2.2',
 })
 
 export const TEST_TRANSACTION_TIMESTAMP = '2026-04-08T10:00:00.000Z'
@@ -290,7 +296,14 @@ export async function withFrozenSystemTime<T>(
 
 export const createMockPersistedNormalizedFileData = (
   overrides: Partial<NormalizedFileData> = {},
-): PersistedNormalizedFileDataV21 => dehydrateNormalizedData(createMockNormalizedFileData(overrides))
+): PersistedNormalizedFileDataV22 => dehydrateNormalizedData(createMockNormalizedFileData(overrides))
+
+export const createMockPersistedNormalizedFileDataV21 = (
+  overrides: Partial<NormalizedFileData> = {},
+): PersistedNormalizedFileDataV21 => ({
+  ...dehydrateNormalizedData(createMockNormalizedFileData(overrides)),
+  version: '2.1',
+})
 
 export const createMockApplication = (
   overrides: Partial<Application> = {},

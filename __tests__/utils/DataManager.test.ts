@@ -1,20 +1,24 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { DataManager } from "@/utils/DataManager";
 import type AutosaveFileService from "@/utils/AutosaveFileService";
-import { FileStorageService, type NormalizedFileData } from "@/utils/services/FileStorageService";
+import { FileStorageService } from "@/utils/services/FileStorageService";
 import type { AlertRecord, StoredCase } from "@/types/case";
 import {
   createMockCaseDisplay,
   createMockNormalizedFileData,
   createMockNormalizedFileDataV20,
+  createMockPersistedNormalizedFileDataV21,
   createMockPerson,
   createMockStoredCase,
 } from "@/src/test/testUtils";
 import {
-  buildPersistedArchiveDataV21,
+  buildPersistedArchiveDataV22,
   MAIN_WORKSPACE_FILE_NAME,
 } from "@/utils/workspaceV21Migration";
-import { dehydrateNormalizedData } from "@/utils/storageV21Migration";
+import {
+  dehydrateNormalizedData,
+  type RuntimeNormalizedFileDataV22,
+} from "@/utils/storageV21Migration";
 
 // ============================================================================
 // Mocks
@@ -98,7 +102,7 @@ function createHydratedStoredCase(id: string, personId: string, name: string): {
   };
 }
 
-function createLinkedRuntimeWriteData(): NormalizedFileData {
+function createLinkedRuntimeWriteData(): RuntimeNormalizedFileDataV22 {
   const primaryPerson = createMockPerson({ id: "person-1" });
   const linkedPerson = createMockPerson({ id: "person-2" });
   const runtimeCase = createMockCaseDisplay({
@@ -391,7 +395,7 @@ describe("DataManager", () => {
       });
       expect(mockFileStorageService.writeNormalizedData).toHaveBeenCalledTimes(1);
       const writtenData = (mockFileStorageService.writeNormalizedData as ReturnType<typeof vi.fn>).mock.calls[0][0];
-      expect(writtenData.version).toBe("2.1");
+      expect(writtenData.version).toBe("2.2");
       expect(writtenData.people).toHaveLength(1);
       expect(writtenData.cases[0].person.id).toBe("person-1");
     });
@@ -429,7 +433,7 @@ describe("DataManager", () => {
       expect(mockFileService.listDataFiles).not.toHaveBeenCalled();
     });
 
-    it("migrates supported archive files to persisted v2.1", async () => {
+    it("migrates supported archive files to persisted v2.2", async () => {
       // ARRANGE
       const archiveData = createArchiveRuntimeData();
       (mockFileStorageService.readRawFileData as ReturnType<typeof vi.fn>).mockResolvedValue(null);
@@ -465,7 +469,7 @@ describe("DataManager", () => {
         "archived-cases-2026.json",
       );
       expect((mockFileService.writeNamedFile as ReturnType<typeof vi.fn>).mock.calls[0][1]).toMatchObject({
-        version: "2.1",
+        version: "2.2",
         archiveType: "cases",
         people: [expect.objectContaining({ id: "archive-person-1" })],
         cases: [
@@ -476,11 +480,11 @@ describe("DataManager", () => {
       });
     });
 
-    it("is idempotent when rerun against already-persisted v2.1 files", async () => {
+    it("is idempotent when rerun against already-current v2.2 files", async () => {
       // ARRANGE
       const runtimeData = createLinkedRuntimeWriteData();
       const persistedWorkspace = dehydrateNormalizedData(runtimeData);
-      const persistedArchive = buildPersistedArchiveDataV21(createArchiveRuntimeData());
+      const persistedArchive = buildPersistedArchiveDataV22(createArchiveRuntimeData());
 
       (mockFileStorageService.readRawFileData as ReturnType<typeof vi.fn>).mockResolvedValue(persistedWorkspace);
       (mockFileStorageService.writeNormalizedData as ReturnType<typeof vi.fn>).mockClear();
@@ -501,14 +505,14 @@ describe("DataManager", () => {
         skipped: 0,
       });
       expect(result.files.map((file) => file.disposition)).toEqual([
-        "already-v2.1",
-        "already-v2.1",
+        "already-current",
+        "already-current",
       ]);
       expect(mockFileStorageService.writeNormalizedData).not.toHaveBeenCalled();
       expect(mockFileService.writeNamedFile).not.toHaveBeenCalled();
     });
 
-    it("writes canonical archive metadata for normalized v2.1 archive files missing archive fields", async () => {
+    it("writes canonical archive metadata for normalized v2.2 archive files missing archive fields", async () => {
       // ARRANGE
       const nonCanonicalArchive = dehydrateNormalizedData({
         ...createLinkedRuntimeWriteData(),
@@ -534,11 +538,11 @@ describe("DataManager", () => {
       expect(result.files[1]).toMatchObject({
         fileName: "archived-cases-2026.json",
         disposition: "migrated",
-        sourceVersion: "2.1",
+        sourceVersion: "2.2",
       });
       expect(mockFileService.writeNamedFile).toHaveBeenCalledTimes(1);
       expect((mockFileService.writeNamedFile as ReturnType<typeof vi.fn>).mock.calls[0][1]).toMatchObject({
-        version: "2.1",
+        version: "2.2",
         archiveType: "cases",
         archiveYear: 2026,
         archivedAt: "2026-03-01T00:00:00.000Z",
@@ -588,6 +592,96 @@ describe("DataManager", () => {
         'Case case-invalid caseRecord.personId "person-missing" does not resolve to a person record.',
       ]);
       expect(mockFileStorageService.writeNormalizedData).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("migrateWorkspaceToV22", () => {
+    it("preserves bridge-era application data during the persisted v2.1 to v2.2 cutover and writes once", async () => {
+      // ARRANGE
+      type DataManagerCutoverSubject = DataManager & {
+        migrateWorkspaceToV22(): Promise<{
+          summary: {
+            migrated: number;
+            alreadyV21: number;
+            failed: number;
+            skipped: number;
+          };
+        }>;
+      };
+      const person = createMockPerson({
+        id: "person-bridge-1",
+        firstName: "Mira",
+        lastName: "Grant",
+        name: "Mira Grant",
+      });
+      const runtimeCase = createMockStoredCase({
+        id: "case-bridge-1",
+        person,
+        people: [{ personId: person.id, role: "applicant", isPrimary: true }],
+        caseRecord: {
+          ...createMockStoredCase().caseRecord,
+          personId: person.id,
+          status: "Active",
+        },
+      });
+      const persistedV21Base = createMockPersistedNormalizedFileDataV21({
+        people: [person],
+        cases: [runtimeCase],
+        applications: [],
+      });
+      const persistedCase = persistedV21Base.cases[0];
+      const bridgeEraPersistedV21 = {
+        ...persistedV21Base,
+        applications: [],
+        cases: [
+          {
+            ...persistedCase,
+            caseRecord: {
+              ...persistedCase.caseRecord,
+              applicationDate: "2026-02-14",
+              applicationType: "Renewal",
+              withWaiver: true,
+              retroRequested: "2026-02-01",
+              appValidated: true,
+              retroMonths: ["2026-01"],
+              agedDisabledVerified: false,
+              citizenshipVerified: true,
+              residencyVerified: true,
+              avsConsentDate: "2026-02-04",
+              voterFormStatus: "requested",
+              intakeCompleted: false,
+            },
+          },
+        ],
+      };
+
+      (mockFileStorageService.readRawFileData as ReturnType<typeof vi.fn>).mockResolvedValue(
+        bridgeEraPersistedV21,
+      );
+      (mockFileService.listDataFiles as ReturnType<typeof vi.fn>).mockResolvedValue([]);
+      const subject = dataManager as DataManagerCutoverSubject;
+
+      // ACT
+      const result = await subject.migrateWorkspaceToV22();
+
+      // ASSERT
+      expect(result.summary).toEqual({
+        migrated: 1,
+        alreadyV21: 0,
+        failed: 0,
+        skipped: 0,
+      });
+      expect(mockFileStorageService.writeNormalizedData).toHaveBeenCalledTimes(1);
+      const writtenData = (mockFileStorageService.writeNormalizedData as ReturnType<typeof vi.fn>).mock
+        .calls[0][0];
+      expect(writtenData).toMatchObject({ version: "2.2" });
+      expect(writtenData.applications).toHaveLength(1);
+      expect(writtenData.applications[0]).toMatchObject({
+        caseId: "case-bridge-1",
+        applicantPersonId: "person-bridge-1",
+        applicationType: "Renewal",
+        retroRequestedAt: "2026-02-01",
+      });
     });
   });
 

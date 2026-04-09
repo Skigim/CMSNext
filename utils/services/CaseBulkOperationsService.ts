@@ -516,7 +516,7 @@ export class CaseBulkOperationsService {
    */
   async clearAllData(categoryConfig: CategoryConfig): Promise<void> {
     const emptyData: NormalizedFileData = {
-      version: "2.1",
+      version: "2.2",
       people: [],
       cases: [],
       financials: [],

@@ -59,7 +59,7 @@ Object.defineProperty(navigator, 'userAgent', {
 
 // Mock localStorage 
 const localStorageMock = {
-  getItem: vi.fn(),
+  getItem: vi.fn(() => null),
   setItem: vi.fn(),
   removeItem: vi.fn(),
   clear: vi.fn(),

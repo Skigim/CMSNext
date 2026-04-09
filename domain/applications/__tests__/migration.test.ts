@@ -1,3 +1,5 @@
+import ts from "typescript";
+import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { createMockCaseRecord } from "@/src/test/testUtils";
@@ -6,6 +8,7 @@ import { APPLICATION_STATUS } from "@/types/application";
 import {
   APPLICATION_OWNED_CASE_RECORD_FIELDS,
   CASE_OWNED_AFTER_APPLICATION_MIGRATION_FIELDS,
+  createCanonicalApplication,
   createMigratedApplication,
   deriveMigratedApplicationStatus,
   normalizeRetroRequestedAt,
@@ -23,6 +26,88 @@ function createMigratedApplicationFromCaseRecord(
     migratedAt: "2026-04-06T10:00:00.000Z",
     caseRecord,
   });
+}
+
+function getCanonicalApplicationStatusTypeDiagnostics() {
+  const projectRoot = process.cwd();
+  const configPath = ts.findConfigFile(projectRoot, ts.sys.fileExists, "tsconfig.json");
+
+  if (!configPath) {
+    throw new Error("Unable to locate tsconfig.json for canonical application status type test.");
+  }
+
+  const configFile = ts.readConfigFile(configPath, ts.sys.readFile);
+
+  if (configFile.error) {
+    throw new Error(ts.flattenDiagnosticMessageText(configFile.error.messageText, "\n"));
+  }
+
+  const parsedConfig = ts.parseJsonConfigFileContent(configFile.config, ts.sys, projectRoot);
+  const virtualFilePath = resolve(
+    projectRoot,
+    "domain/applications/__tests__/canonical-application-status.typecheck.ts",
+  );
+  const virtualSource = [
+    'import { createCanonicalApplication } from "@/domain/applications/migration";',
+    'import type { CaseStatus } from "@/types/case";',
+    "",
+    "const application = createCanonicalApplication({",
+    '  applicationId: "application-1",',
+    '  initialHistoryId: "history-1",',
+    '  caseId: "case-1",',
+    '  applicantPersonId: "person-1",',
+    '  createdAt: "2026-04-09T00:00:00.000Z",',
+    "  caseRecord: {",
+    '    applicationDate: "2026-04-09",',
+    '    applicationType: "Renewal",',
+    "    withWaiver: false,",
+    '    retroRequested: "",',
+    "    appValidated: false,",
+    "    retroMonths: [],",
+    "    agedDisabledVerified: false,",
+    "    citizenshipVerified: false,",
+    "    residencyVerified: false,",
+    '    avsConsentDate: "",',
+    '    voterFormStatus: "",',
+    "    intakeCompleted: true,",
+    '    status: "Active",',
+    "  },",
+    "});",
+    "",
+    "const status: CaseStatus = application.status;",
+    "const historyStatus: CaseStatus = application.statusHistory[0]!.status;",
+    "",
+    "export { status, historyStatus };",
+  ].join("\n");
+
+  const compilerOptions = {
+    ...parsedConfig.options,
+    noEmit: true,
+  };
+  const compilerHost = ts.createCompilerHost(compilerOptions, true);
+  const originalGetSourceFile = compilerHost.getSourceFile.bind(compilerHost);
+
+  compilerHost.getSourceFile = (fileName, languageVersion, onError, shouldCreateNewSourceFile) => {
+    if (resolve(fileName) === virtualFilePath) {
+      return ts.createSourceFile(fileName, virtualSource, languageVersion, true);
+    }
+
+    return originalGetSourceFile(fileName, languageVersion, onError, shouldCreateNewSourceFile);
+  };
+
+  compilerHost.readFile = (fileName) => (
+    resolve(fileName) === virtualFilePath ? virtualSource : ts.sys.readFile(fileName)
+  );
+  compilerHost.fileExists = (fileName) => (
+    resolve(fileName) === virtualFilePath || ts.sys.fileExists(fileName)
+  );
+
+  const program = ts.createProgram([virtualFilePath], compilerOptions, compilerHost);
+
+  return ts
+    .getPreEmitDiagnostics(program)
+    .filter((diagnostic) => resolve(diagnostic.file?.fileName ?? "") === virtualFilePath)
+    .map((diagnostic) => ts.flattenDiagnosticMessageText(diagnostic.messageText, "\n"));
 }
 
 describe("APPLICATION_OWNED_CASE_RECORD_FIELDS", () => {
@@ -101,6 +186,46 @@ describe("deriveMigratedApplicationStatus", () => {
       notes:
         "Migrated from legacy case-embedded application fields; v2.1 case status did not distinguish received, withdrawn, approved, or denied application outcomes.",
     });
+  });
+});
+
+describe("createCanonicalApplication", () => {
+  it("creates canonical applications using the case-status value directly without legacy application-status casts", () => {
+    // ARRANGE
+    const caseRecord = createMockCaseRecord({
+      applicationDate: "2026-04-09",
+      applicationType: "Renewal",
+      withWaiver: false,
+      retroRequested: "",
+      appValidated: false,
+      retroMonths: [],
+      agedDisabledVerified: false,
+      citizenshipVerified: false,
+      residencyVerified: false,
+      avsConsentDate: "",
+      voterFormStatus: "",
+      intakeCompleted: true,
+      status: "Active",
+      notes: [],
+      financials: { resources: [], income: [], expenses: [] },
+    });
+
+    // ACT
+    const application = createCanonicalApplication({
+      applicationId: "application-1",
+      initialHistoryId: "history-1",
+      caseId: "case-1",
+      applicantPersonId: "person-1",
+      createdAt: "2026-04-09T00:00:00.000Z",
+      caseRecord,
+    });
+    const diagnostics = getCanonicalApplicationStatusTypeDiagnostics();
+
+    // ASSERT
+    expect(application.status).toBe("Active");
+    expect(application.statusHistory).toHaveLength(1);
+    expect(application.statusHistory[0]).toMatchObject({ status: "Active" });
+    expect(diagnostics).toEqual([]);
   });
 });
 

@@ -191,7 +191,7 @@ export function createCanonicalApplication(
   const applicationFields = pickApplicationOwnedCaseRecordFields(
     input.caseRecord as CaseRecord,
   );
-  const status = input.caseRecord.status as Application["status"];
+  const status = input.caseRecord.status;
 
   return {
     id: input.applicationId,

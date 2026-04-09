@@ -11,13 +11,17 @@ import {
   createMockNormalizedFileData,
   createMockNormalizedFileDataV20,
   createMockPersistedNormalizedFileData,
+  createMockPersistedNormalizedFileDataV21,
   createMockPerson,
   createMockStoredCase,
 } from "@/src/test/testUtils";
 import type AutosaveFileService from "@/utils/AutosaveFileService";
-import { migrateV20ToV21 } from "@/utils/storageV21Migration";
+import {
+  migrateV20ToV21,
+  type PersistedNormalizedFileDataV21,
+} from "@/utils/storageV21Migration";
 
-describe("FileStorageService v2.1", () => {
+describe("FileStorageService v2.2", () => {
   let fileStorage: FileStorageService;
   let mockFileService: {
     readFile: ReturnType<typeof vi.fn>;
@@ -54,19 +58,6 @@ describe("FileStorageService v2.1", () => {
       },
       ...caseOverrides,
     });
-  }
-
-  function expectHydratedSingleApplicantCase(
-    result: Awaited<ReturnType<FileStorageService["readFileData"]>>,
-    expectedPerson: { id: string; name: string },
-  ) {
-    expect(result?.version).toBe("2.1");
-    expect(result?.people).toHaveLength(1);
-    expect(result?.people[0].id).toBe(expectedPerson.id);
-    expect(result?.cases[0].person.name).toBe(expectedPerson.name);
-    expect(result?.cases[0].people).toEqual([
-      { personId: expectedPerson.id, role: "applicant", isPrimary: true },
-    ]);
   }
 
   function expectCanonicalCaseApplicationFields(
@@ -124,9 +115,18 @@ describe("FileStorageService v2.1", () => {
     // ACT & ASSERT
     const readPromise = fileStorage.readFileData();
     await expect(readPromise).rejects.toThrow(LegacyFormatError);
-    await expect(readPromise).rejects.toThrow(
-      "Use the persisted v2.1 migration tool in Settings → Diagnostics",
+    expect(mockFileService.writeFile).not.toHaveBeenCalled();
+  });
+
+  it("rejects persisted v2.1 workspaces during normal runtime reads until they are upgraded", async () => {
+    // ARRANGE
+    mockFileService.readFile.mockResolvedValue(
+      migrateV20ToV21(createMockNormalizedFileDataV20()),
     );
+
+    // ACT & ASSERT
+    const readPromise = fileStorage.readFileData();
+    await expect(readPromise).rejects.toThrow(LegacyFormatError);
     expect(mockFileService.writeFile).not.toHaveBeenCalled();
   });
 
@@ -142,7 +142,7 @@ describe("FileStorageService v2.1", () => {
     expect(mockFileService.writeFile).not.toHaveBeenCalled();
   });
 
-  it("hydrates persisted v2.1 data on read without rewriting it", async () => {
+  it("returns persisted v2.1 data unchanged for explicit migration utilities", async () => {
     // ARRANGE
     const hydratedCase = createSingleApplicantStoredCase(
       {
@@ -161,38 +161,31 @@ describe("FileStorageService v2.1", () => {
         updatedAt: "2026-01-02T00:00:00.000Z",
       },
     );
-    mockFileService.readFile.mockResolvedValue(createMockPersistedNormalizedFileData({
+    const persistedData = createMockPersistedNormalizedFileDataV21({
       people: [hydratedCase.person],
       cases: [hydratedCase],
       exported_at: "2026-03-01T00:00:00.000Z",
       total_cases: 1,
-    }));
+    });
+    mockFileService.readFile.mockResolvedValue(persistedData);
 
     // ACT
-    const result = await fileStorage.readFileData();
+    const result = await fileStorage.readRawFileData() as PersistedNormalizedFileDataV21 | null;
 
     // ASSERT
-    expectHydratedSingleApplicantCase(result, {
-      id: "person-1",
+    expect(result?.version).toBe("2.1");
+    expect(result?.people).toHaveLength(1);
+    expect(result?.people[0]).toMatchObject({ id: "person-1", name: "Hydrated Person" });
+    expect(result?.cases).toHaveLength(1);
+    expect(result?.cases[0]).toMatchObject({
       name: "Hydrated Person",
+      people: [{ personId: "person-1", role: "applicant", isPrimary: true }],
+      caseRecord: expect.objectContaining({ personId: "person-1" }),
     });
-    expect(result?.cases[0].linkedPeople).toEqual([
-      {
-        person: expect.objectContaining({
-          id: "person-1",
-          name: "Hydrated Person",
-        }),
-        ref: {
-          personId: "person-1",
-          role: "applicant",
-          isPrimary: true,
-        },
-      },
-    ]);
     expect(mockFileService.writeFile).not.toHaveBeenCalled();
   });
 
-  it("hydrates explicit migrated applications on read without rewriting the workspace", async () => {
+  it("returns migrated applications unchanged for explicit migration utilities", async () => {
     // ARRANGE
     const migratedPersistedData = migrateV20ToV21({
       ...createMockNormalizedFileDataV20(),
@@ -224,7 +217,7 @@ describe("FileStorageService v2.1", () => {
     mockFileService.readFile.mockResolvedValue(migratedPersistedData);
 
     // ACT
-    const result = await fileStorage.readFileData();
+    const result = await fileStorage.readRawFileData() as PersistedNormalizedFileDataV21 | null;
 
     // ASSERT
     expect(result?.applications).toHaveLength(1);
@@ -237,9 +230,9 @@ describe("FileStorageService v2.1", () => {
     expect(mockFileService.writeFile).not.toHaveBeenCalled();
   });
 
-  it("rejects invalid persisted v2.1 payloads that fail hydration", async () => {
+  it("returns invalid persisted v2.1 payloads unchanged for explicit migration validation", async () => {
     // ARRANGE
-    const invalidPersistedData = createMockPersistedNormalizedFileData({
+    const invalidPersistedData = createMockPersistedNormalizedFileDataV21({
       cases: [
         createMockStoredCase({
           id: "case-invalid",
@@ -259,16 +252,18 @@ describe("FileStorageService v2.1", () => {
       people: [],
     });
 
-    // ACT & ASSERT
-    const readPromise = fileStorage.readFileData();
-    await expect(readPromise).rejects.toThrow(LegacyFormatError);
-    await expect(readPromise).rejects.toThrow("invalid v2.1 workspace");
-    await expect(readPromise).rejects.toThrow(
-      "Use the persisted v2.1 migration tool in Settings → Diagnostics",
-    );
+    // ACT
+    const result = await fileStorage.readRawFileData() as PersistedNormalizedFileDataV21 | null;
+
+    // ASSERT
+    expect(result).toMatchObject({
+      version: "2.1",
+      people: [],
+      cases: [expect.objectContaining({ id: "case-invalid" })],
+    });
   });
 
-  it("hydrates v2.1 workspaces that were migrated from v2.0", async () => {
+  it("returns v2.1 workspaces migrated from v2.0 unchanged for explicit migration utilities", async () => {
     // ARRANGE
     const migratedPersistedData = migrateV20ToV21({
       ...createMockNormalizedFileDataV20(),
@@ -294,12 +289,16 @@ describe("FileStorageService v2.1", () => {
     mockFileService.readFile.mockResolvedValue(migratedPersistedData);
 
     // ACT
-    const result = await fileStorage.readFileData();
+    const result = await fileStorage.readRawFileData() as PersistedNormalizedFileDataV21 | null;
 
     // ASSERT
-    expectHydratedSingleApplicantCase(result, {
-      id: "person-1",
+    expect(result?.version).toBe("2.1");
+    expect(result?.people).toHaveLength(1);
+    expect(result?.people[0]).toMatchObject({ id: "person-1", name: "Migrated Workspace" });
+    expect(result?.cases).toHaveLength(1);
+    expect(result?.cases[0]).toMatchObject({
       name: "Migrated Workspace",
+      caseRecord: expect.objectContaining({ personId: "person-1" }),
     });
     expect(mockFileService.writeFile).not.toHaveBeenCalled();
   });
@@ -309,8 +308,8 @@ describe("FileStorageService v2.1", () => {
     const categoryConfig: CategoryConfig = {
       ...createMockNormalizedFileData().categoryConfig,
       caseStatuses: [
-        { name: "Approved", colorSlot: "green", countsAsCompleted: true },
-        { name: "Denied", colorSlot: "red", countsAsCompleted: true },
+        { name: "Closed", colorSlot: "slate", countsAsCompleted: true },
+        { name: "Archived", colorSlot: "purple", countsAsCompleted: true },
         { name: "Pending", colorSlot: "amber", countsAsCompleted: false },
       ],
     };
@@ -336,7 +335,7 @@ describe("FileStorageService v2.1", () => {
           applicantPersonId: "person-1",
           applicationDate: "2026-03-01",
           createdAt: "2026-03-01T00:00:00.000Z",
-          status: "Denied",
+          status: "Archived",
           applicationType: "Newer Terminal",
         }),
         createMockApplication({
@@ -345,7 +344,7 @@ describe("FileStorageService v2.1", () => {
           applicantPersonId: "person-1",
           applicationDate: "2026-01-01",
           createdAt: "2026-01-01T00:00:00.000Z",
-          status: "Approved",
+          status: "Closed",
           applicationType: "Older Terminal",
         }),
       ],
@@ -393,7 +392,7 @@ describe("FileStorageService v2.1", () => {
     // ASSERT
     const writtenData = mockFileService.writeFile.mock.calls[0][0];
 
-    expect(writtenData.version).toBe("2.1");
+    expect(writtenData.version).toBe("2.2");
     expect(writtenData.people).toHaveLength(1);
     expect(writtenData.people[0].familyMemberIds).toEqual([
       "44444444-4444-4444-8444-444444444444",
@@ -412,7 +411,7 @@ describe("FileStorageService v2.1", () => {
     expect(writtenRuntimeData.cases[0].person.id).toBe("person-1");
     expect(mockFileService.broadcastDataUpdate).toHaveBeenCalledWith(
       expect.objectContaining({
-        version: "2.1",
+        version: "2.2",
         people: [
           expect.objectContaining({
             id: "person-1",

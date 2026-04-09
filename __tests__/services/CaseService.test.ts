@@ -726,7 +726,7 @@ describe("CaseService hydration seam", () => {
         applicationDate: "2026-01-01",
         applicationType: "Renewal",
         createdAt: "2026-01-01T00:00:00.000Z",
-        status: "Approved",
+        status: "Closed",
         hasWaiver: true,
         retroRequestedAt: "2025-12-01",
         retroMonths: ["2025-12"],
@@ -742,7 +742,7 @@ describe("CaseService hydration seam", () => {
         statusHistory: [
           {
             id: "history-1",
-            status: "Approved",
+            status: "Closed",
             effectiveDate: "2026-01-01",
             changedAt: "2026-01-01T00:00:00.000Z",
             source: "migration",
@@ -755,11 +755,11 @@ describe("CaseService hydration seam", () => {
         applicantPersonId: "person-case-1",
         applicationDate: "2026-03-01",
         createdAt: "2026-03-01T00:00:00.000Z",
-        status: "Denied",
+        status: "Archived",
         statusHistory: [
           {
             id: "history-2",
-            status: "Denied",
+            status: "Archived",
             effectiveDate: "2026-03-01",
             changedAt: "2026-03-01T00:00:00.000Z",
             source: "migration",
@@ -770,17 +770,17 @@ describe("CaseService hydration seam", () => {
         createMockPersistedNormalizedFileData({
           categoryConfig: mergeCategoryConfig({
             caseStatuses: [
-              { name: "Approved", colorSlot: "green", countsAsCompleted: true },
-              { name: "Denied", colorSlot: "red", countsAsCompleted: true },
+              { name: "Closed", colorSlot: "slate", countsAsCompleted: true },
+              { name: "Archived", colorSlot: "purple", countsAsCompleted: true },
               { name: "Pending", colorSlot: "amber", countsAsCompleted: false },
             ],
           }),
           people: [primaryPerson],
           cases: [
             createCaseWithPrimaryApplicant(primaryPerson, {
-              status: "Approved" as CaseStatus,
+              status: "Closed",
               caseRecord: {
-                status: "Approved" as CaseStatus,
+                status: "Closed",
                 applicationDate: "1999-04-01",
                 applicationType: "Stale Legacy Type",
                 withWaiver: false,
