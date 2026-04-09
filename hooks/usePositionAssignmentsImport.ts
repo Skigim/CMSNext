@@ -264,7 +264,8 @@ export function usePositionAssignmentsImport({
         // Compare against stored cases
         const { unmatchedCases, matchedWithStatusChange, summary } = compareAssignments(
           cases,
-          parseResult.entries
+          parseResult.entries,
+          categoryConfig.caseStatuses,
         );
 
         logger.info("Assignment comparison complete", {
@@ -339,7 +340,7 @@ export function usePositionAssignmentsImport({
         input.value = "";
       }
     },
-    [dataManager, cases]
+    [dataManager, cases, categoryConfig.caseStatuses]
   );
 
   // ---- Close preview ----

@@ -10,22 +10,11 @@
  * @module domain/positions/matching
  */
 
+import type { StatusConfig } from "@/types/categoryConfig";
 import type { StoredCase } from "../../types/case";
 import type { ParsedPositionEntry } from "./parser";
 import { normalizeMcn } from "../alerts/matching";
-
-const IMPORTED_STATUS_ABBREVIATIONS: Readonly<Record<string, string>> = {
-  PE: "Pending",
-  AC: "Approved",
-  SP: "Spenddown",
-  CL: "Closed",
-  DE: "Denied",
-};
-
-function normalizeImportedStatus(rawStatus: string): string {
-  const trimmedStatus = rawStatus.trim();
-  return IMPORTED_STATUS_ABBREVIATIONS[trimmedStatus.toUpperCase()] ?? trimmedStatus;
-}
+import { resolveImportedStatusForConfig } from "./importStatusHelpers";
 
 // ============================================================================
 // Types
@@ -112,7 +101,8 @@ function buildAssignmentMcnMap(
  */
 export function compareAssignments(
   cases: StoredCase[],
-  entries: ParsedPositionEntry[]
+  entries: ParsedPositionEntry[],
+  existingStatuses: StatusConfig[] = [],
 ): AssignmentsCompareResult {
   const assignmentMcnMap = buildAssignmentMcnMap(entries);
 
@@ -145,7 +135,7 @@ export function compareAssignments(
     if (matchedEntry) {
       matched++;
       const importedStatus = matchedEntry.status
-        ? normalizeImportedStatus(matchedEntry.status)
+        ? resolveImportedStatusForConfig(matchedEntry.status, existingStatuses)
         : undefined;
       if (
         importedStatus &&

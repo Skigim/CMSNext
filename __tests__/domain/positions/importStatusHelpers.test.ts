@@ -73,6 +73,26 @@ describe("buildStatusImportPlan", () => {
     expect(result.statusUpdatesByStatus.get("Pending")).toEqual(["1", "2"]);
   });
 
+  it("resolves imported open statuses to the configured open status", () => {
+    // ARRANGE
+    const existingStatuses: StatusConfig[] = [
+      { name: "Pending Review", colorSlot: "amber", countsAsCompleted: false },
+      { name: "Approved", colorSlot: "green", countsAsCompleted: true },
+    ];
+    const selectedUpdates: CaseStatusUpdate[] = [
+      { case: createCase("1"), currentStatus: "Approved", importedStatus: "Pending" },
+      { case: createCase("2"), currentStatus: "Approved", importedStatus: "Active" },
+    ];
+
+    // ACT
+    const result = buildStatusImportPlan(selectedUpdates, existingStatuses);
+
+    // ASSERT
+    expect(result.newStatuses).toEqual([]);
+    expect(Array.from(result.statusUpdatesByStatus.keys())).toEqual(["Pending Review"]);
+    expect(result.statusUpdatesByStatus.get("Pending Review")).toEqual(["1", "2"]);
+  });
+
   it("adds unknown statuses and groups updates by canonical status", () => {
     const existingStatuses: StatusConfig[] = [{ name: "Active", colorSlot: "green" }];
     const selectedUpdates: CaseStatusUpdate[] = [
