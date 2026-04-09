@@ -66,7 +66,7 @@ The following fields should be treated as non-application workflow fields and mo
 
 Use a targeted compatibility bridge centered on a single shared resolver that selects the active application for display and edit behavior.
 
-The resolver chooses the oldest non-terminal application for a case by `applicationDate`. When `applicationDate` ties or is missing, it falls back deterministically to `applicationCreatedAt` ascending and then `applicationId` lexicographically ascending. If no non-terminal application exists, the same stable ordering is applied across the terminal set. All application-owned reads and compatibility hydration must use that exact same rule so intake, case details, and any other current display surfaces do not disagree about which application is current.
+The resolver chooses the oldest non-terminal application for a case by `applicationDate`. When `applicationDate` ties or is missing, it falls back deterministically to `createdAt` ascending and then `id` lexicographically ascending. If no non-terminal application exists, the same stable ordering is applied across the terminal set. All application-owned reads and compatibility hydration must use that exact same rule so intake, case details, and any other current display surfaces do not disagree about which application is current.
 
 The architecture has four boundaries:
 

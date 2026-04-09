@@ -466,7 +466,7 @@ function compareApplicationCanonicalOrder(left: Application, right: Application)
   return left.id.localeCompare(right.id);
 }
 
-function selectDeterministicCanonicalApplication(
+export function selectDeterministicCanonicalApplication(
   applications: Application[],
 ): Application | null {
   if (applications.length === 0) {

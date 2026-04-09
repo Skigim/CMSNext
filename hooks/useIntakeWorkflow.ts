@@ -186,6 +186,9 @@ function prepareIntakeSubmission({
   const normalizedAvsConsentDate = dateInputValueToISO(
     validatedFormData.avsConsentDate,
   );
+  const hasExplicitlyClearedAvsConsentDate =
+    typeof validatedFormData.avsConsentDate === "string" &&
+    validatedFormData.avsConsentDate.trim() === "";
   const defaultLivingArrangement = config.livingArrangements[0] || "";
   const personBase = createPersonData(activeExistingCase, {
     livingArrangement: defaultLivingArrangement,
@@ -310,7 +313,9 @@ function prepareIntakeSubmission({
       pregnancy: validatedFormData.pregnancy ?? false,
       avsConsentDate: preserveApplicationOwnedFields
         ? (caseRecordBase.avsConsentDate ?? "")
-        : (normalizedAvsConsentDate ?? caseRecordBase.avsConsentDate ?? ""),
+        : (hasExplicitlyClearedAvsConsentDate
+            ? ""
+            : (normalizedAvsConsentDate ?? caseRecordBase.avsConsentDate ?? "")),
       maritalStatus: validatedFormData.maritalStatus ?? "",
       intakeCompleted: true,
     },
@@ -471,15 +476,37 @@ export function useIntakeWorkflow({
 
     const loadCaseApplications = async () => {
       try {
-        const applications = await dataManager.getApplicationsForCase(
-          activeExistingCaseId,
-        );
+        const [applicationsResult, refreshedCaseResult] = await Promise.allSettled([
+          dataManager.getApplicationsForCase(activeExistingCaseId),
+          typeof dataManager.getCaseById === "function"
+            ? dataManager.getCaseById(activeExistingCaseId)
+            : Promise.resolve<StoredCase | null>(null),
+        ]);
+
+        if (applicationsResult.status === "rejected") {
+          throw applicationsResult.reason;
+        }
 
         if (isDisposed) {
           return;
         }
 
-        setCaseApplications(applications);
+        setCaseApplications(applicationsResult.value);
+
+        if (
+          refreshedCaseResult.status === "fulfilled" &&
+          refreshedCaseResult.value
+        ) {
+          editSourceCaseRef.current = refreshedCaseResult.value;
+          setEditSourceCase(refreshedCaseResult.value);
+        }
+
+        if (refreshedCaseResult.status === "rejected") {
+          logger.warn("Failed to refresh intake edit source case", {
+            error: extractErrorMessage(refreshedCaseResult.reason),
+            caseId: activeExistingCaseId,
+          });
+        }
       } catch (error) {
         if (isDisposed) {
           return;

@@ -46,19 +46,19 @@ describe("selectOldestNonTerminalApplication", () => {
     const completionStatuses = new Set(["approved", "denied"]);
     const applications = [
       createMockApplication({
-        id: "application-created-later",
+        id: "application-a-created-later",
         applicationDate: "2026-02-01",
         createdAt: "2026-02-03T00:00:00.000Z",
         status: "Pending",
       }),
       createMockApplication({
-        id: "application-created-earlier-z",
+        id: "application-z-created-earlier",
         applicationDate: "2026-02-01",
         createdAt: "2026-02-02T00:00:00.000Z",
         status: "Pending",
       }),
       createMockApplication({
-        id: "application-created-earlier-a",
+        id: "application-y-created-earlier",
         applicationDate: "2026-02-01",
         createdAt: "2026-02-02T00:00:00.000Z",
         status: "Pending",
@@ -72,7 +72,7 @@ describe("selectOldestNonTerminalApplication", () => {
     );
 
     // Assert
-    expect(result?.id).toBe("application-created-earlier-a");
+    expect(result?.id).toBe("application-y-created-earlier");
   });
 
   it("prefers a valid application date over blank or invalid application dates", () => {
@@ -114,19 +114,19 @@ describe("selectOldestNonTerminalApplication", () => {
     const completionStatuses = new Set(["approved", "denied"]);
     const applications = [
       createMockApplication({
-        id: "application-created-later",
+        id: "application-a-created-later",
         applicationDate: "",
         createdAt: "2026-02-03T00:00:00.000Z",
         status: "Pending",
       }),
       createMockApplication({
-        id: "application-created-earlier-z",
+        id: "application-z-created-earlier",
         applicationDate: "not-a-date",
         createdAt: "2026-02-02T00:00:00.000Z",
         status: "Pending",
       }),
       createMockApplication({
-        id: "application-created-earlier-a",
+        id: "application-y-created-earlier",
         applicationDate: "",
         createdAt: "2026-02-02T00:00:00.000Z",
         status: "Pending",
@@ -140,7 +140,7 @@ describe("selectOldestNonTerminalApplication", () => {
     );
 
     // Assert
-    expect(result?.id).toBe("application-created-earlier-a");
+    expect(result?.id).toBe("application-y-created-earlier");
   });
 
   it("returns null when every application is terminal", () => {

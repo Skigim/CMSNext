@@ -116,6 +116,13 @@ describe('CaseBulkOperationsService', () => {
       const testCase = createMockCase('case-1');
       const data = createEmptyNormalizedData();
       data.cases = [testCase];
+      data.applications = [
+        createMockApplication({
+          id: 'application-1',
+          caseId: 'case-1',
+          applicantPersonId: testCase.person.id,
+        }),
+      ];
       data.financials = [{ id: 'fin-1', caseId: 'case-1', category: 'resources', name: 'Item', description: 'Test item', amount: 100, verificationStatus: 'Needs VR', createdAt: '', updatedAt: '' }];
       data.notes = [{ id: 'note-1', caseId: 'case-1', category: 'General', content: 'Test note', createdAt: '', updatedAt: '' }];
       data.alerts = [{ id: 'alert-1', caseId: 'case-1', alertCode: 'TST', alertType: 'General', alertDate: '', mcNumber: 'MCN-1', createdAt: '', updatedAt: '' }];
@@ -127,6 +134,7 @@ describe('CaseBulkOperationsService', () => {
       expect(mockFileStorage.writeNormalizedData).toHaveBeenCalledWith(
         expect.objectContaining({
           cases: [],
+          applications: [],
           financials: [],
           notes: [],
           alerts: [],
@@ -231,7 +239,12 @@ describe('CaseBulkOperationsService', () => {
 
     it('should skip cases with same status', async () => {
       const data = createEmptyNormalizedData();
-      data.cases = [createMockCase('case-1', 'Active')];
+      data.cases = [
+        {
+          ...createMockCase('case-1', 'Active'),
+          updatedAt: '2026-01-01T00:00:00.000Z',
+        },
+      ];
       mockFileStorage.setData(data);
 
       const result = await service.updateCasesStatus(['case-1'], 'Active');
@@ -244,6 +257,13 @@ describe('CaseBulkOperationsService', () => {
           activityLog: [],
         })
       );
+      expect(mockFileStorage.touchCaseTimestamps).toHaveBeenCalledWith(
+        expect.any(Array),
+        [],
+        expect.any(String),
+      );
+      const writtenData = mockFileStorage.writeNormalizedData.mock.calls[0][0] as NormalizedFileData;
+      expect(writtenData.cases[0].updatedAt).toBe('2026-01-01T00:00:00.000Z');
     });
 
     it('should track not found case IDs', async () => {
@@ -456,7 +476,10 @@ describe('CaseBulkOperationsService', () => {
 
     it('should skip cases with same priority', async () => {
       const data = createEmptyNormalizedData();
-      const testCase = createMockCase('case-1');
+      const testCase: StoredCase = {
+        ...createMockCase('case-1'),
+        updatedAt: '2026-01-01T00:00:00.000Z',
+      };
       testCase.priority = true;
       data.cases = [testCase];
       mockFileStorage.setData(data);
@@ -469,6 +492,13 @@ describe('CaseBulkOperationsService', () => {
           activityLog: [],
         })
       );
+      expect(mockFileStorage.touchCaseTimestamps).toHaveBeenCalledWith(
+        expect.any(Array),
+        [],
+        expect.any(String),
+      );
+      const writtenData = mockFileStorage.writeNormalizedData.mock.calls[0][0] as NormalizedFileData;
+      expect(writtenData.cases[0].updatedAt).toBe('2026-01-01T00:00:00.000Z');
     });
 
     it('should track not found case IDs', async () => {

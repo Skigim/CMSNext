@@ -127,6 +127,7 @@ export class CaseBulkOperationsService {
     const updatedData: NormalizedFileData = {
       ...currentData,
       cases: currentData.cases.filter(c => !idsToDelete.has(c.id)),
+      applications: currentData.applications?.filter(a => !idsToDelete.has(a.caseId)),
       financials: currentData.financials.filter(f => !idsToDelete.has(f.caseId)),
       notes: currentData.notes.filter(n => !idsToDelete.has(n.caseId)),
       alerts: currentData.alerts.filter(a => !a.caseId || !idsToDelete.has(a.caseId)),
@@ -182,6 +183,7 @@ export class CaseBulkOperationsService {
     const idsToUpdate = new Set(caseIds);
     const timestamp = new Date().toISOString();
     const updatedCases: StoredCase[] = [];
+    const changedCaseIds: string[] = [];
     const activityEntries: CaseActivityEntry[] = [];
     const notFound: string[] = [];
 
@@ -218,6 +220,7 @@ export class CaseBulkOperationsService {
       };
 
       updatedCases.push(updatedCase);
+  changedCaseIds.push(c.id);
 
       // Create activity log entry using factory method
       activityEntries.push(
@@ -234,10 +237,9 @@ export class CaseBulkOperationsService {
       return updatedCase;
     });
 
-    const touchedCaseIds = caseIds.filter(id => existingIds.has(id));
     const casesWithTouchedTimestamps = this.fileStorage.touchCaseTimestamps(
       casesWithChanges,
-      touchedCaseIds,
+      changedCaseIds,
       timestamp,
     );
 
@@ -299,6 +301,7 @@ export class CaseBulkOperationsService {
     const idsToUpdate = new Set(caseIds);
     const timestamp = new Date().toISOString();
     const updatedCases: StoredCase[] = [];
+    const changedCaseIds: string[] = [];
     const activityEntries: CaseActivityEntry[] = [];
     const notFound: string[] = [];
 
@@ -335,6 +338,7 @@ export class CaseBulkOperationsService {
       };
 
       updatedCases.push(updatedCase);
+  changedCaseIds.push(c.id);
 
       // Create activity log entry
       activityEntries.push({
@@ -353,10 +357,9 @@ export class CaseBulkOperationsService {
       return updatedCase;
     });
 
-    const touchedCaseIds = caseIds.filter(id => existingIds.has(id));
     const casesWithTouchedTimestamps = this.fileStorage.touchCaseTimestamps(
       casesWithChanges,
-      touchedCaseIds,
+      changedCaseIds,
       timestamp,
     );
 

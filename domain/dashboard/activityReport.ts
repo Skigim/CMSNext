@@ -35,7 +35,17 @@ function parseDateInput(targetDate: string | Date): Date {
 
   if (DATE_ONLY_PATTERN.test(targetDate)) {
     const [year, month, day] = targetDate.split("-").map(Number);
-    return new Date(year, month - 1, day);
+    const parsedDate = new Date(year, month - 1, day);
+
+    if (
+      parsedDate.getFullYear() !== year ||
+      parsedDate.getMonth() !== month - 1 ||
+      parsedDate.getDate() !== day
+    ) {
+      return new Date(Number.NaN);
+    }
+
+    return parsedDate;
   }
 
   return new Date(targetDate);
@@ -124,16 +134,23 @@ const ACTIVITY_TYPE_COUNTER: Record<
 };
 
 function createCaseBreakdown(entry: CaseActivityEntry): DailyCaseActivityBreakdown {
-  return {
+  const breakdown: DailyCaseActivityBreakdown = {
     caseId: entry.caseId,
     caseName: entry.caseName,
     caseMcn: entry.caseMcn,
-    statusChanges: entry.type === "status-change" ? 1 : 0,
-    priorityChanges: entry.type === "priority-change" ? 1 : 0,
-    notesAdded: entry.type === "note-added" ? 1 : 0,
-    applicationChanges: isApplicationActivityType(entry.type) ? 1 : 0,
+    statusChanges: 0,
+    priorityChanges: 0,
+    notesAdded: 0,
+    applicationChanges: 0,
     entries: [entry],
   };
+
+  const counterField = ACTIVITY_TYPE_COUNTER[entry.type];
+  if (counterField) {
+    breakdown[counterField] = 1;
+  }
+
+  return breakdown;
 }
 
 function appendEntryToCaseBreakdown(

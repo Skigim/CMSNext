@@ -10,7 +10,8 @@ import type { Application } from "@/types/application";
 import type { CaseActivityEntry } from "@/types/activityLog";
 import type { CategoryConfig } from "@/types/categoryConfig";
 import type { Template } from "@/types/template";
-import { mergeCategoryConfig } from "@/types/categoryConfig";
+import { getCompletionStatusNames, mergeCategoryConfig } from "@/types/categoryConfig";
+import { selectOldestNonTerminalApplication } from "@/domain/applications";
 import { discoverStatusesFromCases, discoverAlertTypesFromAlerts } from "../categoryConfigMigration";
 import { migrateFinancialItems, hasItemsNeedingMigration } from "../financialItemMigration";
 import AutosaveFileService from "../AutosaveFileService";
@@ -22,6 +23,7 @@ import {
   hydrateStoredCase,
   isPersistedNormalizedFileDataV21,
   persistedCasesContainLegacyApplicationFields,
+  selectDeterministicCanonicalApplication,
   syncRuntimeApplications,
   type PersistedNormalizedFileDataV21,
 } from "../storageV21Migration";
@@ -674,13 +676,21 @@ export class FileStorageService {
   private hydrateDehydratedCases(
     data: CaseDehydratedNormalizedFileData,
   ): StoredCase[] {
-    return data.cases.map((caseItem) =>
-      hydrateStoredCase(
+    const completionStatuses = getCompletionStatusNames(data.categoryConfig);
+
+    return data.cases.map((caseItem) => {
+      const caseApplications =
+        data.applications?.filter((application) => application.caseId === caseItem.id) ?? [];
+      const primaryApplication =
+        selectOldestNonTerminalApplication(caseApplications, completionStatuses) ??
+        selectDeterministicCanonicalApplication(caseApplications);
+
+      return hydrateStoredCase(
         caseItem,
         data.people,
-        data.applications?.find((application) => application.caseId === caseItem.id) ?? null,
-      ),
-    );
+        primaryApplication,
+      );
+    });
   }
 
   private buildEnrichedCategoryConfig(runtimeData: NormalizedFileData): CategoryConfig {

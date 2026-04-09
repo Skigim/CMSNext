@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { FileStorageService, LegacyFormatError } from "@/utils/services/FileStorageService";
+import type { CategoryConfig } from "@/types/categoryConfig";
 import {
   createMockApplication,
   createMockNormalizedFileData,
@@ -235,6 +236,62 @@ describe("FileStorageService v2.1", () => {
       { personId: "person-1", role: "applicant", isPrimary: true },
     ]);
     expect(mockFileService.writeFile).toHaveBeenCalledTimes(1);
+  });
+
+  it("hydrates dehydrated writes from the canonical terminal application order instead of the first match", async () => {
+    // ARRANGE
+    const categoryConfig: CategoryConfig = {
+      ...createMockNormalizedFileData().categoryConfig,
+      caseStatuses: [
+        { name: "Approved", colorSlot: "green", countsAsCompleted: true },
+        { name: "Denied", colorSlot: "red", countsAsCompleted: true },
+        { name: "Pending", colorSlot: "amber", countsAsCompleted: false },
+      ],
+    };
+    const persistedData = createMockPersistedNormalizedFileData({
+      categoryConfig,
+      people: [createMockPerson({ id: "person-1" })],
+      cases: [
+        createMockStoredCase({
+          id: "case-1",
+          person: createMockPerson({ id: "person-1" }),
+          people: [{ personId: "person-1", role: "applicant", isPrimary: true }],
+          caseRecord: {
+            ...createMockStoredCase().caseRecord,
+            personId: "person-1",
+            applicationType: "Stale Embedded Value",
+          },
+        }),
+      ],
+      applications: [
+        createMockApplication({
+          id: "application-z-newer",
+          caseId: "case-1",
+          applicantPersonId: "person-1",
+          applicationDate: "2026-03-01",
+          createdAt: "2026-03-01T00:00:00.000Z",
+          status: "Denied",
+          applicationType: "Newer Terminal",
+        }),
+        createMockApplication({
+          id: "application-a-older",
+          caseId: "case-1",
+          applicantPersonId: "person-1",
+          applicationDate: "2026-01-01",
+          createdAt: "2026-01-01T00:00:00.000Z",
+          status: "Approved",
+          applicationType: "Older Terminal",
+        }),
+      ],
+    });
+    mockFileService.readFile.mockResolvedValue(null);
+
+    // ACT
+    const writtenRuntimeData = await fileStorage.writeNormalizedData(persistedData);
+
+    // ASSERT
+    expect(writtenRuntimeData.cases[0].caseRecord.applicationType).toBe("Older Terminal");
+    expect(writtenRuntimeData.cases[0].caseRecord.applicationDate).toBe("2026-01-01");
   });
 
   it("dehydrates runtime data to root people plus case refs on write", async () => {
