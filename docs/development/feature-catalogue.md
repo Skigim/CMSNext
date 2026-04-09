@@ -2,7 +2,7 @@
 
 > Living index of marketable features, their current implementation status, quality, and future investments.
 
-**Last Updated:** April 6, 2026
+**Last Updated:** April 9, 2026
 
 ## How to Use This Document
 
@@ -18,25 +18,25 @@
 
 ## Quick Reference (April 2026)
 
-| Feature               | Rating | Trend | Notes                                                                                                                                            |
-| --------------------- | ------ | ----- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Case Management       | 95     | ↑     | Normalized people reuse and household rendering are shipped; Week 2A application-domain groundwork is landed, with workflow wiring still pending |
-| Financial Operations  | 92     | →     | Mature CRUD/history flows; month-view follow-through remains                                                                                     |
-| Template System       | 93     | ↑     | Unified templates now cover VR, footer, summary, and narrative flows                                                                             |
-| Local-First Storage   | 91     | ↑     | Persisted v2.1 workspace/archive migration path shipped                                                                                          |
-| Developer Enablement  | 90     | ↑     | 1141 passing tests, March instruction refresh, keyboard shortcuts shipped                                                                        |
-| Dashboard & Insights  | 88     | →     | Priority scoring solid; widget personalization still open                                                                                        |
-| Premium UI/UX         | 88     | ↑     | Keyboard shortcut customization shipped; accessibility audit still pending                                                                       |
-| Notes & Collaboration | 84     | →     | Stable note/case summary workflows, no cross-case search yet                                                                                     |
-| Case Archival         | 89     | ↑     | Archive migration path now aligned with persisted v2.1 workspaces                                                                                |
-| Data Portability      | 86     | ↑     | Explicit upgrade tooling now covers active workspace and archive files                                                                           |
-| Configurable Statuses | 78     | →     | Stable and integrated into dashboard metrics                                                                                                     |
-| Legacy Migration      | 84     | ↑     | v2.0-to-v2.1 upgrade tooling shipped through Settings                                                                                            |
-| Autosave & Recovery   | 75     | →     | Reliable debounce/retry flow; richer visibility still open                                                                                       |
-| Feature Flags         | 72     | →     | Infrastructure intact; still mostly in-memory/dev-facing                                                                                         |
+| Feature               | Rating | Trend | Notes                                                                                                                                                          |
+| --------------------- | ------ | ----- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Case Management       | 95     | ↑     | Canonical intake ownership is shipped with deterministic application selection and locked non-intake edits; status-history UI and compatibility cleanup remain |
+| Financial Operations  | 92     | →     | Mature CRUD/history flows; month-view follow-through remains                                                                                                   |
+| Template System       | 93     | ↑     | Unified templates now cover VR, footer, summary, and narrative flows                                                                                           |
+| Local-First Storage   | 91     | ↑     | Persisted v2.1 workspace/archive migration path shipped                                                                                                        |
+| Developer Enablement  | 90     | ↑     | 1626 passing tests, instruction refresh, keyboard shortcuts shipped, canonical application coverage expanded                                                   |
+| Dashboard & Insights  | 88     | →     | Priority scoring solid; widget personalization still open                                                                                                      |
+| Premium UI/UX         | 88     | ↑     | Keyboard shortcut customization shipped; accessibility audit still pending                                                                                     |
+| Notes & Collaboration | 84     | →     | Stable note/case summary workflows, no cross-case search yet                                                                                                   |
+| Case Archival         | 89     | ↑     | Archive migration path now aligned with persisted v2.1 workspaces                                                                                              |
+| Data Portability      | 86     | ↑     | Explicit upgrade tooling now covers active workspace and archive files                                                                                         |
+| Configurable Statuses | 78     | →     | Stable and integrated into dashboard metrics                                                                                                                   |
+| Legacy Migration      | 84     | ↑     | v2.0-to-v2.1 upgrade tooling shipped through Settings                                                                                                          |
+| Autosave & Recovery   | 75     | →     | Reliable debounce/retry flow; richer visibility still open                                                                                                     |
+| Feature Flags         | 72     | →     | Infrastructure intact; still mostly in-memory/dev-facing                                                                                                       |
 
 **Average Rating:** 86.8/100  
-**Test Status:** 1141 tests passing
+**Test Status:** 1626 tests passing
 
 ---
 
@@ -168,11 +168,13 @@ Maintained by the storage + autosave working group. Align telemetry follow-ups w
 
 ### Implementation Snapshot
 
-**Rating: 95/100** _(Updated April 6, 2026)_
+**Rating: 95/100** _(Updated April 9, 2026)_
 
 Core case CRUD is highly mature. March 2026 completed the normalized people hydration milestone, and the audited April follow-through confirmed that existing-person reuse and relationship-driven household rendering are already live in the intake and case-details UI. The remaining narrow limitation is that intake edit does not yet support reassigning the primary applicant to a different existing person.
 
-The v2.2 application foundation now spans the domain, storage, and service layers: `Application` and `ApplicationStatusHistory` types are defined, migration helpers conservatively normalize legacy case-embedded application data, and canonical `applications[]` support is wired through storage plus `DataManager`/`ApplicationService`. Intake and case-view workflows still need UI integration, so user-facing create/edit flows continue to depend on legacy case-embedded application fields until that slice lands.
+The v2.2 application foundation now spans the domain, storage, service, hook, and intake UI layers. Intake create and intake edit now read and write application-owned fields through canonical `applications[]`, choosing the oldest non-terminal application by `applicationDate` with deterministic fallback across terminal-only sets. When edit mode has no non-terminal application to target, application-owned fields remain visible but locked so unsupported changes do not leak back into compatibility data.
+
+Case-detail and other non-intake surfaces still rely on hydrated compatibility fields rather than a dedicated application timeline UI. Status history now synchronizes canonically underneath those flows, but it is not yet surfaced as a first-class user-facing timeline.
 
 **January 14, 2026:** Case details restructured to 2-column layout - IntakeColumn removed entirely with fields redistributed across PersonColumn (intake verification, relationships) and CaseColumn (application validated, AVS/voter fields, reviews). Internal 3-column grids optimize space utilization. Retro months input appears directly below retro requested checkbox for logical grouping.
 
@@ -195,7 +197,7 @@ The v2.2 application foundation now spans the domain, storage, and service layer
 - **Selection Management**: `useCaseSelection` hook provides multi-select state with select-all, partial selection indicators
 - **Streamlined Hook Layer**: `useCaseManagement` provides clean React integration with toast feedback and error handling
 - **Navigation Integration**: `useNavigationFlow` ensures consistent transitions and performance measurement logging across views
-- **Comprehensive Test Coverage**: 912/912 tests passing (100%) including service tests, integration tests, and component tests
+- **Expanded Regression Coverage**: Storage, service, hook, and component suites now cover canonical application ownership, deterministic selection, locked-field preservation, and status synchronization
 - **Data Model Integrity**: Normalized structures (`CaseDisplay`, `CaseRecord`, `Person`, `Relationship`) with strict TypeScript validation
 - **Runtime Hydration**: `DataManager`, `CaseService`, and related domain helpers now hydrate normalized `people[]` data into runtime case displays
 - **Linked-Person Save Flows**: Intake/edit pipelines now persist relationship-aware linked people against the normalized store
@@ -203,6 +205,9 @@ The v2.2 application foundation now spans the domain, storage, and service layer
 - **Relationship-Driven Household Rendering**: Case details and intake hydration render household links from normalized relationship data rather than legacy embedded payload assumptions
 - **Application Domain Foundation**: Week 2A introduced normalized application domain types plus migration helpers that define which intake/application fields move out of `CaseRecord` and how legacy records seed an initial pending status history
 - **Application Storage + Service Wiring**: Canonical `applications[]` support is now wired through storage migration helpers, `FileStorageService`, `DataManager`, and `ApplicationService` so the data layer can persist and manage application records independently of the case shell
+- **Canonical Intake Ownership**: Intake create/edit now persist application-owned fields through canonical application records instead of treating legacy case-embedded values as the source of truth
+- **Deterministic Application Selection**: Hydration and compatibility reads now choose the oldest non-terminal application by `applicationDate`, with deterministic fallback ordering for terminal-only sets
+- **Protected Non-Intake Edits**: Live case-edit sections keep application-owned fields visible but disabled outside intake while downstream AVS-processing and review markers remain editable
 - **Import/Export**: Bulk operations with duplicate detection and progress indicators
 - **Autosave Integration**: Forms seamlessly integrate with AutosaveFileService for reliable persistence
 - **Filter/Sort Persistence**: Case list preferences saved to localStorage with reset button
@@ -211,7 +216,8 @@ The v2.2 application foundation now spans the domain, storage, and service layer
 ### Gaps / Risks
 
 - Intake edit cannot yet reassign the primary applicant to a different existing person
-- Application lifecycle data now has canonical storage and service support, but intake and case-detail editing still rely on legacy case-embedded fields until the UI integration slice lands
+- Application status history now syncs canonically, but the UI still lacks a first-class application timeline and case-detail surfaces still depend on hydrated compatibility mirrors
+- Non-intake case surfaces intentionally lock application-owned edits; richer post-intake application management still needs a dedicated UI slice rather than more legacy field reuse
 - Cross-case shared-person propagation is implemented through the shared people registry, but the suite would benefit from one direct regression test proving that behavior across multiple linked cases
 - Accessibility audits for complex forms remain ad hoc
 
@@ -220,13 +226,14 @@ The v2.2 application foundation now spans the domain, storage, and service layer
 - **Saved Filter Views**: Introduce user-configurable filter presets
 - **Relationship Search**: Enable filtering/searching by relationship data
 - **Applicant Reassignment in Intake Edit**: If product direction requires it, allow an existing case to switch its primary applicant link to a different shared person record
+- **Application Timeline UI**: Surface canonical status history and selected-application context directly in case details instead of relying only on compatibility fields
 - **Virtualization**: Consider virtual scrolling for 1k+ datasets if pagination proves insufficient
 - **Bulk Edit Fields**: Extend bulk actions to edit other case fields
 
 ### Coverage & Telemetry
 
-- **Service Layer**: CaseService and hydration flows are covered across service, hook, and integration tests for CRUD operations, bulk operations, import/export, and linked-person persistence
-- **Test Suite Status**: 1141 tests passing as of March 2026 roadmap status
+- **Service Layer**: CaseService, ApplicationService, storage hydration, and intake workflow coverage now exercise canonical application ownership, deterministic selection, bulk status synchronization, CRUD flows, and linked-person persistence
+- **Test Suite Status**: 1626 tests passing as of the April 2026 canonical-intake ownership merge
 - **Bulk Operations**: `deleteCases()` and `updateCasesStatus()` with single read/write pattern
 - **Performance**: Pagination provides immediate relief; telemetry infrastructure ready for benchmarking
 
@@ -626,13 +633,13 @@ Eight-theme system built on shadcn/ui delivers polished, responsive layouts. Tai
 
 ### Implementation Snapshot
 
-**Rating: 90/100** _(Updated March 30, 2026)_
+**Rating: 90/100** _(Updated April 9, 2026)_
 
-Tooling stack (Vitest, ESLint 9 flat config, Tailwind v4 pipeline) covers day-to-day development with scripted performance baselines, seed data generators, and comprehensive architecture documentation. March 2026 strengthened the repo's custom-instruction layout, shipped keyboard shortcut customization, and pushed the suite to 1141 passing tests while the normalized data migration/hydration work landed.
+Tooling stack (Vitest, ESLint 9 flat config, Tailwind v4 pipeline) covers day-to-day development with scripted performance baselines, seed data generators, and comprehensive architecture documentation. March and April 2026 strengthened the repo's custom-instruction layout, shipped keyboard shortcut customization, and pushed the suite to 1626 passing tests while the normalized data migration, hydration, and canonical application-ownership coverage landed.
 
 ### Strengths
 
-- **Comprehensive test harness**: 1141 passing tests across unit, RTL, integration, and domain suites with coverage reporting
+- **Comprehensive test harness**: 1626 passing tests across unit, RTL, integration, and domain suites with coverage reporting
 - **Service Architecture**: DataManager (461 lines) + 7 focused services totaling 2,265 lines
 - **Dependency Injection**: Clean service composition with focused responsibilities
 - **Storage Normalization**: v2.1 normalized format with automatic migration from v2.0 and older legacy formats
@@ -723,7 +730,7 @@ Keyboard navigation now includes user customization through Settings:
 
 ### Coverage & Telemetry
 
-- **Vitest suites**: 1141 tests passing per the March 2026 roadmap snapshot
+- **Vitest suites**: 1626 tests passing per the April 2026 canonical-intake ownership snapshot
 - **Service tests**: Complete coverage for all 7 services
 - **Toast utilities**: 14 tests covering loading/success/error states, isMounted guards
 - **Pagination tests**: 7 tests covering navigation, disabled states, empty state

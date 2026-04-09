@@ -2,14 +2,14 @@
 
 **Report Date:** April 1, 2026  
 **Branch:** main (stable)  
-**Tests:** 1141/1141 passing ✅  
+**Tests:** 1626/1626 passing ✅  
 **Build:** Production-ready ✅  
 **Average Feature Rating:** 85.5/100  
-**Status:** In progress | Application storage/service slice landed early | Intake & Application Layer
+**Status:** In progress | Canonical intake ownership landed | Intake & Application Layer
 
 ---
 
-## ✅ Recent Completed Work (March carryover)
+## ✅ Recent Completed Work (March carryover + April progress)
 
 - [x] Shipped the persisted v2.1 workspace + archive migration path from Settings.
 - [x] Wired `FileStorageService`, `DataManager`, and `CaseService` to hydrate normalized people data at runtime.
@@ -17,6 +17,7 @@
 - [x] Expanded intake/edit workflow coverage for linked-person save payloads and existing-case updates.
 - [x] Landed create-time existing-person reuse plus relationship-driven household rendering in the intake and case-details UI.
 - [x] Landed the Week 2A application-domain foundation: `Application`/`ApplicationStatusHistory` types, migration field ownership rules, and initial migration helpers/tests.
+- [x] Moved intake create/edit onto canonical `applications[]` ownership with deterministic oldest-non-terminal selection, status-history synchronization, and locked non-intake application fields on the live case-edit surface.
 - [ ] Decide whether intake edit should support applicant reassignment to a different existing person or document the current limitation as intentional.
 
 ---
@@ -24,7 +25,7 @@
 ## 🎯 April Objectives
 
 1. **Close the v2.1 UI Follow-Through** - Update docs to reflect the shipped normalized people UI work and decide whether edit-time applicant reassignment is still a required follow-up.
-2. **Begin v2.2: Intake & Application Layer** - Separate application lifecycle data from the long-lived case record and introduce a normalized `applications[]` collection.
+2. **Advance v2.2: Intake & Application Layer** - Keep application lifecycle data in normalized `applications[]`, complete the remaining status-history UI work, and reduce reliance on compatibility mirrors.
 3. **Establish Migration-Safe Foundations for v3.0** - Add new structures incrementally with explicit migration planning so the daily case-management workflow remains stable throughout the roadmap.
 
 ---
@@ -55,7 +56,7 @@
 
 #### First Clean Slice: Week 2A - Application Model & Migration Design
 
-Status on `feat/application-domain-week2a`: the domain/model slice is landed, and the downstream storage persistence plus `DataManager`/service wiring have already merged. Intake and case-view UI integration remain downstream.
+Status on `feat/application-domain-week2a`: the domain/model slice is landed, the downstream storage persistence plus `DataManager`/service wiring have merged, and canonical intake ownership is now live. Remaining UI work is status-history surfacing and compatibility cleanup.
 
 - [x] Lock the `Application` entity boundary before touching storage wiring or UI flows.
 - [x] Define `ApplicationStatusHistory` as the canonical status timeline model for v2.2.
@@ -70,7 +71,7 @@ Status on `feat/application-domain-week2a`: the domain/model slice is landed, an
 
 #### Features
 
-- [ ] Add `applications[]` to the persisted schema design for v2.2.
+- [x] Add `applications[]` to the persisted schema design for v2.2.
 - [x] Introduce `Application` and `ApplicationStatusHistory` TypeScript/domain types.
 - [x] Build initial migration utilities to derive normalized application records from existing v2.1 case data.
 
@@ -107,17 +108,19 @@ Status on `feat/application-domain-week2a`: the domain/model slice is landed, an
 
 #### Prep Work
 
-- [ ] Identify all intake forms, tabs, and workflows that should read/write `Application` records instead of overloading `CaseRecord`.
+- [x] Identify all intake forms, tabs, and workflows that should read/write `Application` records instead of overloading `CaseRecord`.
 - [ ] Define the minimum viable UI for application status tracking in the single-program workflow.
 
 #### Features
 
-- [ ] Update intake flows to create or update normalized application records alongside cases.
+- [x] Update intake flows to create or update normalized application records alongside cases.
+- [x] Lock non-intake application-owned fields on the live case-edit surface while compatibility reads remain in place.
 - [ ] Add application status history rendering in the UI.
 - [ ] Ensure case views clearly distinguish ongoing case data from application-event data.
 
 #### Refactoring & Polish
 
+- [x] Expand storage/service/hook/component regression coverage for canonical application ownership, deterministic selection, and status synchronization.
 - [ ] Finalize tests for end-to-end create/edit/migrate scenarios involving `applications[]`.
 - [ ] Create April changelog.
 - [ ] Update feature catalogue and draft the May roadmap (expected v2.3 verification/task focus).
@@ -128,10 +131,10 @@ Status on `feat/application-domain-week2a`: the domain/model slice is landed, an
 
 | Metric                                 | Start | Target          |
 | -------------------------------------- | ----- | --------------- |
-| Tests passing                          | 1141  | 1250+           |
+| Tests passing                          | 1626  | 1700+           |
 | Remaining verified v2.1 UI limitations | 1     | 0 or documented |
 | v2.2 schema + migration design status  | 0%    | 100%            |
-| Application service/storage wiring     | 0%    | 100%            |
+| Application service/storage wiring     | 100%  | 100%            |
 | Average feature rating                 | 85.5  | 88+             |
 
 ---
@@ -176,7 +179,7 @@ This roadmap reflects our accelerated development pace with direct AI assistance
 
 - **Traditional estimate:** 1-2 features per week
 - **AI-assisted reality:** 3-4 features per week with full test coverage
-- **April target:** close out the remaining v2.1 documentation and decision work, reflect the landed v2.2 application-domain plus storage/service slice accurately, then finish the initial UI integration and end-to-end regression coverage
+- **April target:** close out the remaining v2.1 documentation and decision work, reflect the landed v2.2 application-domain, storage/service, and canonical-intake ownership slices accurately, then finish status-history UI and compatibility cleanup
 
 ### Quality Gates
 
@@ -190,9 +193,9 @@ Every feature must:
 
 ### Recommended Next Step
 
-Start the Week 4 prep and UI integration slice: inventory every intake and case-view surface that still reads or writes legacy case-embedded application fields, define the minimum viable application-status UI for the single-program workflow, then wire those flows onto normalized `applications[]` records before broad end-to-end regression work begins.
+Follow the canonical-intake ownership PR with the cleanup-and-surfacing slice: add application status-history rendering, decide how case-detail surfaces should present the selected canonical application data, and remove legacy migration-on-save or compatibility write paths once those screens are stable.
 
 ---
 
 **Prepared by:** GitHub Copilot  
-**Last updated:** April 8, 2026
+**Last updated:** April 9, 2026
