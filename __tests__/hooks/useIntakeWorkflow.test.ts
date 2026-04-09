@@ -101,6 +101,20 @@ function createPendingPromise<T>() {
   return new Promise<T>(() => {});
 }
 
+function createEditCase(
+  id = "case-edit-1",
+  overrides: Parameters<typeof createMockStoredCase>[0] = {},
+) {
+  return createMockStoredCase({ id, ...overrides });
+}
+
+function createCaseApplication(
+  caseId: string,
+  overrides: Parameters<typeof createMockApplication>[0] = {},
+) {
+  return createMockApplication({ caseId, ...overrides });
+}
+
 /** Fills the four fields required to make the intake form submittable. */
 function fillMinimumRequiredFields(result: ReturnType<typeof renderIntakeHook>["result"]) {
   act(() => {
@@ -252,7 +266,7 @@ describe("useIntakeWorkflow", () => {
 
     it("keeps application-owned fields disabled during the initial edit-mode application fetch", async () => {
       // ARRANGE
-      const existingCase = createMockStoredCase({ id: "case-edit-1" });
+      const existingCase = createEditCase();
       const pendingApplications = createDeferredPromise<
         ReturnType<typeof createMockApplication>[]
       >();
@@ -276,17 +290,15 @@ describe("useIntakeWorkflow", () => {
 
     it("disables application-owned fields when editing and only terminal applications exist", async () => {
       // Arrange
-      const existingCase = createMockStoredCase({ id: "case-edit-1" });
+      const existingCase = createEditCase();
       const terminalApplications = [
-        createMockApplication({
+        createCaseApplication("case-edit-1", {
           id: "application-approved-1",
-          caseId: "case-edit-1",
           status: APPLICATION_STATUS.Approved,
           applicationDate: "2026-01-01",
         }),
-        createMockApplication({
+        createCaseApplication("case-edit-1", {
           id: "application-denied-1",
-          caseId: "case-edit-1",
           status: APPLICATION_STATUS.Denied,
           applicationDate: "2026-02-01",
         }),
@@ -306,17 +318,15 @@ describe("useIntakeWorkflow", () => {
 
     it("keeps application-owned fields enabled when editing and a non-terminal application exists", async () => {
       // Arrange
-      const existingCase = createMockStoredCase({ id: "case-edit-1" });
+      const existingCase = createEditCase();
       const applications = [
-        createMockApplication({
+        createCaseApplication("case-edit-1", {
           id: "application-approved-1",
-          caseId: "case-edit-1",
           status: APPLICATION_STATUS.Approved,
           applicationDate: "2026-01-01",
         }),
-        createMockApplication({
+        createCaseApplication("case-edit-1", {
           id: "application-pending-1",
-          caseId: "case-edit-1",
           status: APPLICATION_STATUS.Pending,
           applicationDate: "2026-02-01",
         }),
@@ -335,15 +345,14 @@ describe("useIntakeWorkflow", () => {
 
     it("does not refetch or relock when rerendered with a new existingCase object for the same case id", async () => {
       // ARRANGE
-      const existingCase = createMockStoredCase({ id: "case-edit-1" });
-      const refreshedExistingCase = createMockStoredCase({
+      const existingCase = createEditCase();
+      const refreshedExistingCase = createEditCase("case-edit-1", {
         ...existingCase,
         updatedAt: "2026-04-08T12:34:56.000Z",
       });
       const applications = [
-        createMockApplication({
+        createCaseApplication("case-edit-1", {
           id: "application-pending-1",
-          caseId: "case-edit-1",
           status: APPLICATION_STATUS.Pending,
           applicationDate: "2026-02-01",
         }),
@@ -377,19 +386,17 @@ describe("useIntakeWorkflow", () => {
 
     it("refetches same-case applications when the file data change token advances", async () => {
       // ARRANGE
-      const existingCase = createMockStoredCase({ id: "case-edit-1" });
+      const existingCase = createEditCase();
       const initialApplications = [
-        createMockApplication({
+        createCaseApplication("case-edit-1", {
           id: "application-pending-1",
-          caseId: "case-edit-1",
           status: APPLICATION_STATUS.Pending,
           applicationDate: "2026-02-01",
         }),
       ];
       const refreshedApplications = [
-        createMockApplication({
+        createCaseApplication("case-edit-1", {
           id: "application-approved-1",
-          caseId: "case-edit-1",
           status: APPLICATION_STATUS.Approved,
           applicationDate: "2026-03-01",
         }),
@@ -425,20 +432,18 @@ describe("useIntakeWorkflow", () => {
 
     it("fails closed when rerendering from an editable case to a terminal-only case until the new fetch resolves", async () => {
       // ARRANGE
-      const editableCase = createMockStoredCase({ id: "case-editable-1" });
-      const terminalOnlyCase = createMockStoredCase({ id: "case-terminal-1" });
+      const editableCase = createEditCase("case-editable-1");
+      const terminalOnlyCase = createEditCase("case-terminal-1");
       const editableApplications = [
-        createMockApplication({
+        createCaseApplication("case-editable-1", {
           id: "application-pending-1",
-          caseId: "case-editable-1",
           status: APPLICATION_STATUS.Pending,
           applicationDate: "2026-02-01",
         }),
       ];
       const terminalApplications = [
-        createMockApplication({
+        createCaseApplication("case-terminal-1", {
           id: "application-approved-1",
-          caseId: "case-terminal-1",
           status: APPLICATION_STATUS.Approved,
           applicationDate: "2026-03-01",
         }),
@@ -491,7 +496,7 @@ describe("useIntakeWorkflow", () => {
 
     it("logs a warning and falls back safely when application loading fails", async () => {
       // Arrange
-      const existingCase = createMockStoredCase({ id: "case-edit-1" });
+      const existingCase = createEditCase();
       mockDataManager.getApplicationsForCase.mockRejectedValue(
         new Error("applications unavailable"),
       );

@@ -218,6 +218,56 @@ export const createMockNormalizedFileData = (
   ...overrides,
 })
 
+export const TEST_TRANSACTION_TIMESTAMP = '2026-04-08T10:00:00.000Z'
+
+export const TEST_SKEWED_TRANSACTION_TIMESTAMP = '2026-04-08T10:00:01.000Z'
+
+export const applyTouchedCaseTimestamps = (
+  cases: StoredCase[],
+  touchedCaseIds?: Iterable<string>,
+  timestampOverride?: string,
+): StoredCase[] => {
+  if (!touchedCaseIds) {
+    return cases
+  }
+
+  const caseIds = new Set(touchedCaseIds)
+  if (caseIds.size === 0) {
+    return cases
+  }
+
+  const timestamp = timestampOverride ?? new Date().toISOString()
+  return cases.map((caseItem) =>
+    caseIds.has(caseItem.id) ? { ...caseItem, updatedAt: timestamp } : caseItem,
+  )
+}
+
+export const createClockSkewTouchCaseTimestamps = (
+  skewedTimestamp: string,
+  delegate: typeof applyTouchedCaseTimestamps = applyTouchedCaseTimestamps,
+) => (
+  cases: StoredCase[],
+  touchedCaseIds?: Iterable<string>,
+  timestampOverride?: string,
+): StoredCase[] => {
+  vi.setSystemTime(new Date(skewedTimestamp))
+  return delegate(cases, touchedCaseIds, timestampOverride)
+}
+
+export async function withFrozenSystemTime<T>(
+  timestamp: string,
+  callback: () => Promise<T> | T,
+): Promise<T> {
+  vi.useFakeTimers()
+  vi.setSystemTime(new Date(timestamp))
+
+  try {
+    return await callback()
+  } finally {
+    vi.useRealTimers()
+  }
+}
+
 export const createMockPersistedNormalizedFileData = (
   overrides: Partial<NormalizedFileData> = {},
 ): PersistedNormalizedFileDataV21 => dehydrateNormalizedData(createMockNormalizedFileData(overrides))

@@ -121,22 +121,6 @@ type NormalizedWriteData =
   | PersistedNormalizedFileDataV21
   | CaseDehydratedNormalizedFileData;
 
-function createEmptyNormalizedFileData(): NormalizedFileData {
-  return {
-    version: NORMALIZED_VERSION as "2.1",
-    people: [],
-    cases: [],
-    applications: [],
-    financials: [],
-    notes: [],
-    alerts: [],
-    exported_at: new Date().toISOString(),
-    total_cases: 0,
-    categoryConfig: mergeCategoryConfig(),
-    activityLog: [],
-  };
-}
-
 function cloneApplicationForWrite(application: Application): Application {
   return {
     ...application,
@@ -347,7 +331,7 @@ export class FileStorageService {
   * 5. Keeps manual migration tooling on the explicit migration path only
  *
    * **Behavior:**
-   * - Returns empty structure if no file exists (first run)
+   * - Returns null if no workspace file exists yet
   * - Throws LegacyFormatError for v2.0, pre-v2.0, or invalid persisted v2.1 formats
  * - Throws Error for other read failures
  *
@@ -374,7 +358,7 @@ export class FileStorageService {
       const rawData = await this.fileService.readFile();
 
       if (!rawData) {
-        return createEmptyNormalizedFileData();
+        return null;
       }
 
       if (isNormalizedFileData(rawData)) {
@@ -445,7 +429,7 @@ export class FileStorageService {
     }
 
     if (shouldRewriteApplications || hasFinancialMigration) {
-      await this.writeNormalizedData(normalizedData);
+      return await this.writeNormalizedData(normalizedData);
     }
 
     return normalizedData;

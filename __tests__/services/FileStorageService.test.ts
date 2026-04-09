@@ -61,6 +61,18 @@ describe("FileStorageService v2.1", () => {
     expect(mockFileService.writeFile).not.toHaveBeenCalled();
   });
 
+  it("returns null when no workspace file exists", async () => {
+    // ARRANGE
+    mockFileService.readFile.mockResolvedValue(null);
+
+    // ACT
+    const result = await fileStorage.readFileData();
+
+    // ASSERT
+    expect(result).toBeNull();
+    expect(mockFileService.writeFile).not.toHaveBeenCalled();
+  });
+
   it("hydrates persisted v2.1 data on read without rewriting it", async () => {
     // ARRANGE
     const hydratedPerson = {
@@ -162,6 +174,7 @@ describe("FileStorageService v2.1", () => {
       hasWaiver: true,
       retroRequestedAt: "2026-02-01",
     });
+    expect(mockFileService.broadcastDataUpdate).toHaveBeenCalledWith(result);
     expect(mockFileService.writeFile).toHaveBeenCalledTimes(1);
     const writtenData = mockFileService.writeFile.mock.calls[0][0];
     expect(writtenData.applications).toHaveLength(1);

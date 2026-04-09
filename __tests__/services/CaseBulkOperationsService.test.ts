@@ -3,7 +3,16 @@ import { CaseBulkOperationsService } from '@/utils/services/CaseBulkOperationsSe
 import type { FileStorageService, NormalizedFileData, StoredCase } from '@/utils/services/FileStorageService';
 import type { CaseStatus } from '@/types/case';
 import type { CategoryConfig } from '@/types/categoryConfig';
-import { createMockApplication, createMockStoredCase } from '@/src/test/testUtils';
+import {
+  applyTouchedCaseTimestamps,
+  createClockSkewTouchCaseTimestamps,
+  createMockApplication,
+  createMockNormalizedFileData,
+  createMockStoredCase,
+  TEST_SKEWED_TRANSACTION_TIMESTAMP,
+  TEST_TRANSACTION_TIMESTAMP,
+  withFrozenSystemTime,
+} from '@/src/test/testUtils';
 
 // Mock the logger using vi.hoisted to ensure proper initialization order
 const mockLoggerFns = vi.hoisted(() => ({
@@ -31,19 +40,7 @@ describe('CaseBulkOperationsService', () => {
         storedData = data;
         return Promise.resolve();
       }),
-      touchCaseTimestamps: vi.fn().mockImplementation((cases: StoredCase[], caseIds?: Iterable<string>, timestampOverride?: string) => {
-        if (!caseIds) {
-          return cases;
-        }
-
-        const touchedIds = new Set(caseIds);
-        if (touchedIds.size === 0) {
-          return cases;
-        }
-
-        const timestamp = timestampOverride ?? new Date().toISOString();
-        return cases.map(c => (touchedIds.has(c.id) ? { ...c, updatedAt: timestamp } : c));
-      }),
+      touchCaseTimestamps: vi.fn().mockImplementation(applyTouchedCaseTimestamps),
       setData: (data: NormalizedFileData | null) => {
         storedData = data;
       },
@@ -76,18 +73,14 @@ describe('CaseBulkOperationsService', () => {
     verificationStatuses: ['Needs VR', 'Verified'],
   };
 
-  const createEmptyNormalizedData = (): NormalizedFileData => ({
-    version: '2.1',
-    people: [],
-    cases: [],
-    financials: [],
-    notes: [],
-    alerts: [],
-    exported_at: '2024-01-15T10:00:00Z',
-    total_cases: 0,
-    categoryConfig: defaultCategoryConfig,
-    activityLog: [],
-  });
+  const createEmptyNormalizedData = (
+    overrides: Partial<NormalizedFileData> = {},
+  ): NormalizedFileData =>
+    createMockNormalizedFileData({
+      exported_at: '2024-01-15T10:00:00Z',
+      categoryConfig: defaultCategoryConfig,
+      ...overrides,
+    });
 
   beforeEach(() => {
     mockFileStorage = createMockFileStorage();
@@ -279,8 +272,6 @@ describe('CaseBulkOperationsService', () => {
 
     it('should sync canonical application status history with the bulk transaction timestamp', async () => {
       // Arrange
-      const transactionTimestamp = '2026-04-08T10:00:00.000Z';
-      const skewedTimestamp = '2026-04-08T10:00:01.000Z';
       const primaryPersonId = 'person-1';
       const data = createEmptyNormalizedData();
       data.categoryConfig = {
@@ -347,41 +338,26 @@ describe('CaseBulkOperationsService', () => {
       ];
       mockFileStorage.setData(data);
 
-      vi.useFakeTimers();
-      vi.setSystemTime(new Date(transactionTimestamp));
       mockFileStorage.touchCaseTimestamps.mockImplementation(
-        (cases: StoredCase[], caseIds?: Iterable<string>, timestampOverride?: string) => {
-          if (!caseIds) {
-            return cases;
-          }
-
-          const touchedIds = new Set(caseIds);
-          vi.setSystemTime(new Date(skewedTimestamp));
-          const timestamp = timestampOverride ?? new Date().toISOString();
-          return cases.map((caseItem) =>
-            touchedIds.has(caseItem.id) ? { ...caseItem, updatedAt: timestamp } : caseItem,
-          );
-        },
+        createClockSkewTouchCaseTimestamps(TEST_SKEWED_TRANSACTION_TIMESTAMP),
       );
 
-      try {
+      await withFrozenSystemTime(TEST_TRANSACTION_TIMESTAMP, async () => {
         // Act
         const result = await service.updateCasesStatus(['case-1'], 'Pending');
 
         // Assert
         expect(result.updated).toHaveLength(1);
-      } finally {
-        vi.useRealTimers();
-      }
+      });
 
       const writtenData = mockFileStorage.writeNormalizedData.mock.calls[0][0] as NormalizedFileData;
       expect(mockFileStorage.touchCaseTimestamps).toHaveBeenCalledWith(
         expect.any(Array),
         ['case-1'],
-        transactionTimestamp,
+        TEST_TRANSACTION_TIMESTAMP,
       );
-      expect(writtenData.cases[0].updatedAt).toBe(transactionTimestamp);
-      expect(writtenData.activityLog[0].timestamp).toBe(transactionTimestamp);
+      expect(writtenData.cases[0].updatedAt).toBe(TEST_TRANSACTION_TIMESTAMP);
+      expect(writtenData.activityLog[0].timestamp).toBe(TEST_TRANSACTION_TIMESTAMP);
       expect(writtenData.applications?.[0]).toMatchObject({
         id: 'application-1',
         status: 'Pending',
@@ -399,7 +375,7 @@ describe('CaseBulkOperationsService', () => {
           voterFormStatus: 'requested',
           isIntakeCompleted: false,
         },
-        updatedAt: transactionTimestamp,
+        updatedAt: TEST_TRANSACTION_TIMESTAMP,
       });
       expect(writtenData.applications?.[0].statusHistory).toEqual([
         {
@@ -412,7 +388,7 @@ describe('CaseBulkOperationsService', () => {
         expect.objectContaining({
           status: 'Pending',
           effectiveDate: '2026-04-08',
-          changedAt: transactionTimestamp,
+          changedAt: TEST_TRANSACTION_TIMESTAMP,
           source: 'user',
         }),
       ]);

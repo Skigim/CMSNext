@@ -1,6 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { createMockApplication, createMockNormalizedFileData, createMockStoredCase } from "@/src/test/testUtils";
+import {
+  applyTouchedCaseTimestamps,
+  createClockSkewTouchCaseTimestamps,
+  createMockApplication,
+  createMockNormalizedFileData,
+  createMockStoredCase,
+  TEST_SKEWED_TRANSACTION_TIMESTAMP,
+  TEST_TRANSACTION_TIMESTAMP,
+  withFrozenSystemTime,
+} from "@/src/test/testUtils";
 import type { Application } from "@/types/application";
 import {
   ApplicationService,
@@ -51,21 +60,7 @@ function createMockFileStorage() {
         timestampOverride?: string,
       ) => NormalizedFileData["cases"]
     >()
-    .mockImplementation((cases, touchedCaseIds, timestampOverride) => {
-      if (!touchedCaseIds) {
-        return cases;
-      }
-
-      const caseIds = new Set(touchedCaseIds);
-      if (caseIds.size === 0) {
-        return cases;
-      }
-
-      const timestamp = timestampOverride ?? new Date().toISOString();
-      return cases.map((caseItem) =>
-        caseIds.has(caseItem.id) ? { ...caseItem, updatedAt: timestamp } : caseItem,
-      );
-    });
+    .mockImplementation(applyTouchedCaseTimestamps);
 
   return {
     readFileData,
@@ -138,51 +133,29 @@ describe("ApplicationService", () => {
 
   it("reuses one transaction timestamp when adding an application", async () => {
     // Arrange
-    const transactionTimestamp = "2026-04-08T10:00:00.000Z";
-    const skewedTimestamp = "2026-04-08T10:00:01.000Z";
     const application = createMockApplication({
       id: "application-2",
       caseId: "case-1",
     });
 
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date(transactionTimestamp));
     mockFileStorage.touchCaseTimestamps.mockImplementation(
-      (cases, touchedCaseIds, timestampOverride) => {
-        if (!touchedCaseIds) {
-          return cases;
-        }
-
-        const caseIds = new Set(touchedCaseIds);
-        if (caseIds.size === 0) {
-          return cases;
-        }
-
-        vi.setSystemTime(new Date(skewedTimestamp));
-        const timestamp = timestampOverride ?? new Date().toISOString();
-
-        return cases.map((caseItem) =>
-          caseIds.has(caseItem.id) ? { ...caseItem, updatedAt: timestamp } : caseItem,
-        );
-      },
+      createClockSkewTouchCaseTimestamps(TEST_SKEWED_TRANSACTION_TIMESTAMP),
     );
 
-    try {
+    await withFrozenSystemTime(TEST_TRANSACTION_TIMESTAMP, async () => {
       // Act
       await service.addApplication(application);
-    } finally {
-      vi.useRealTimers();
-    }
+    });
 
     // Assert
     expect(mockFileStorage.touchCaseTimestamps).toHaveBeenCalledWith(
       expect.any(Array),
       ["case-1"],
-      transactionTimestamp,
+      TEST_TRANSACTION_TIMESTAMP,
     );
     const writtenData = mockFileStorage.writeNormalizedData.mock.calls[0][0];
-    expect(writtenData.cases[0].updatedAt).toBe(transactionTimestamp);
-    expect(writtenData.activityLog[0].timestamp).toBe(transactionTimestamp);
+    expect(writtenData.cases[0].updatedAt).toBe(TEST_TRANSACTION_TIMESTAMP);
+    expect(writtenData.activityLog[0].timestamp).toBe(TEST_TRANSACTION_TIMESTAMP);
   });
 
   it("updates an application while preserving immutable identifiers", async () => {
@@ -307,8 +280,6 @@ describe("ApplicationService", () => {
 
   it("reuses one transaction timestamp when appending application status history", async () => {
     // Arrange
-    const transactionTimestamp = "2026-04-08T10:00:00.000Z";
-    const skewedTimestamp = "2026-04-08T10:00:01.000Z";
     const initialApplication = createMockApplication({
       id: "application-1",
       caseId: "case-1",
@@ -329,51 +300,31 @@ describe("ApplicationService", () => {
       }),
     );
 
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date(transactionTimestamp));
     mockFileStorage.touchCaseTimestamps.mockImplementation(
-      (cases, touchedCaseIds, timestampOverride) => {
-        if (!touchedCaseIds) {
-          return cases;
-        }
-
-        const caseIds = new Set(touchedCaseIds);
-        if (caseIds.size === 0) {
-          return cases;
-        }
-
-        vi.setSystemTime(new Date(skewedTimestamp));
-        const timestamp = timestampOverride ?? new Date().toISOString();
-
-        return cases.map((caseItem) =>
-          caseIds.has(caseItem.id) ? { ...caseItem, updatedAt: timestamp } : caseItem,
-        );
-      },
+      createClockSkewTouchCaseTimestamps(TEST_SKEWED_TRANSACTION_TIMESTAMP),
     );
 
-    try {
+    await withFrozenSystemTime(TEST_TRANSACTION_TIMESTAMP, async () => {
       // Act
       await service.addStatusHistory("case-1", "application-1", {
         id: "history-2",
         status: "Approved",
         effectiveDate: "2026-04-08",
-        changedAt: transactionTimestamp,
+        changedAt: TEST_TRANSACTION_TIMESTAMP,
         source: "user",
       });
-    } finally {
-      vi.useRealTimers();
-    }
+    });
 
     // Assert
     expect(mockFileStorage.touchCaseTimestamps).toHaveBeenCalledWith(
       expect.any(Array),
       ["case-1"],
-      transactionTimestamp,
+      TEST_TRANSACTION_TIMESTAMP,
     );
     const writtenData = mockFileStorage.writeNormalizedData.mock.calls[0][0];
-    expect(writtenData.cases[0].updatedAt).toBe(transactionTimestamp);
-    expect(writtenData.activityLog[0].timestamp).toBe(transactionTimestamp);
-    expect(writtenData.applications?.[0].updatedAt).toBe(transactionTimestamp);
+    expect(writtenData.cases[0].updatedAt).toBe(TEST_TRANSACTION_TIMESTAMP);
+    expect(writtenData.activityLog[0].timestamp).toBe(TEST_TRANSACTION_TIMESTAMP);
+    expect(writtenData.applications?.[0].updatedAt).toBe(TEST_TRANSACTION_TIMESTAMP);
   });
 
   it("fails to add status history if application belongs to a different case", async () => {

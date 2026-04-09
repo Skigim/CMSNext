@@ -92,7 +92,7 @@ That first application record must:
 
 ### Intake Edit
 
-Intake edit resolves the active application before persisting application-owned fields. The active application is the oldest non-terminal application for the case by `applicationDate`.
+Intake edit resolves the active application before persisting application-owned fields using the shared resolver rule defined above.
 
 The edit flow must:
 

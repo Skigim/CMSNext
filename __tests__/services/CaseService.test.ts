@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
+  createClockSkewTouchCaseTimestamps,
   createMockApplication,
   createMockCaseDisplay,
   createMockPersistedNormalizedFileData,
@@ -8,6 +9,9 @@ import {
   createMockNewPersonData,
   createMockPerson,
   createMockStoredCase,
+  TEST_SKEWED_TRANSACTION_TIMESTAMP,
+  TEST_TRANSACTION_TIMESTAMP,
+  withFrozenSystemTime,
 } from "@/src/test/testUtils";
 import type AutosaveFileService from "@/utils/AutosaveFileService";
 import { FileStorageService, type NormalizedFileData } from "@/utils/services/FileStorageService";
@@ -717,15 +721,13 @@ describe("CaseService hydration seam", () => {
 
     it("aligns the status update transaction timestamp across case and application records", async () => {
       // ARRANGE
-      const transactionTimestamp = "2026-04-08T10:00:00.000Z";
-      const skewedTimestamp = "2026-04-08T10:00:01.000Z";
-      vi.useFakeTimers();
-      vi.setSystemTime(new Date(transactionTimestamp));
       const originalTouchCaseTimestamps = fileStorage.touchCaseTimestamps.bind(fileStorage);
-      vi.spyOn(fileStorage, "touchCaseTimestamps").mockImplementation((...args) => {
-        vi.setSystemTime(new Date(skewedTimestamp));
-        return originalTouchCaseTimestamps(...args);
-      });
+      vi.spyOn(fileStorage, "touchCaseTimestamps").mockImplementation(
+        createClockSkewTouchCaseTimestamps(
+          TEST_SKEWED_TRANSACTION_TIMESTAMP,
+          originalTouchCaseTimestamps,
+        ),
+      );
       vi.mocked(mockFileService.readFile).mockResolvedValue(
         createMockPersistedNormalizedFileData({
           people: [createMockPerson({ id: "person-1" })],
@@ -763,25 +765,23 @@ describe("CaseService hydration seam", () => {
       );
       vi.mocked(mockFileService.writeFile).mockResolvedValue(true);
 
-      try {
+      await withFrozenSystemTime(TEST_TRANSACTION_TIMESTAMP, async () => {
         // ACT
         const result = await caseService.updateCaseStatus("case-1", "Approved" as CaseStatus);
 
         // ASSERT
-        expect(result.updatedAt).toBe(transactionTimestamp);
-      } finally {
-        vi.useRealTimers();
-      }
+        expect(result.updatedAt).toBe(TEST_TRANSACTION_TIMESTAMP);
+      });
 
       const writtenData = vi.mocked(mockFileService.writeFile).mock.calls[0][0];
-      expect(writtenData.cases[0].updatedAt).toBe(transactionTimestamp);
-      expect(writtenData.cases[0].caseRecord.updatedDate).toBe(transactionTimestamp);
-      expect(writtenData.activityLog[0].timestamp).toBe(transactionTimestamp);
-      expect(writtenData.applications[0].updatedAt).toBe(transactionTimestamp);
+      expect(writtenData.cases[0].updatedAt).toBe(TEST_TRANSACTION_TIMESTAMP);
+      expect(writtenData.cases[0].caseRecord.updatedDate).toBe(TEST_TRANSACTION_TIMESTAMP);
+      expect(writtenData.activityLog[0].timestamp).toBe(TEST_TRANSACTION_TIMESTAMP);
+      expect(writtenData.applications[0].updatedAt).toBe(TEST_TRANSACTION_TIMESTAMP);
       expect(writtenData.applications[0].statusHistory[1]).toMatchObject({
         status: "Approved",
         effectiveDate: "2026-04-08",
-        changedAt: transactionTimestamp,
+        changedAt: TEST_TRANSACTION_TIMESTAMP,
       });
     });
 

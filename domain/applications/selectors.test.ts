@@ -9,10 +9,17 @@ import {
   selectOldestNonTerminalApplication,
 } from "@/domain/applications";
 
+const completionStatuses = new Set(["approved", "denied"]);
+
+function selectApplication(
+  applications: ReturnType<typeof createMockApplication>[],
+) {
+  return selectOldestNonTerminalApplication(applications, completionStatuses);
+}
+
 describe("selectOldestNonTerminalApplication", () => {
   it("selects the oldest non-terminal application by application date", () => {
     // Arrange
-    const completionStatuses = new Set(["approved", "denied"]);
     const applications = [
       createMockApplication({
         id: "application-approved",
@@ -32,10 +39,7 @@ describe("selectOldestNonTerminalApplication", () => {
     ];
 
     // Act
-    const result = selectOldestNonTerminalApplication(
-      applications,
-      completionStatuses,
-    );
+    const result = selectApplication(applications);
 
     // Assert
     expect(result?.id).toBe("application-open-oldest");
@@ -43,7 +47,6 @@ describe("selectOldestNonTerminalApplication", () => {
 
   it("uses createdAt then id as deterministic fallbacks when application dates tie", () => {
     // Arrange
-    const completionStatuses = new Set(["approved", "denied"]);
     const applications = [
       createMockApplication({
         id: "application-a-created-later",
@@ -66,10 +69,7 @@ describe("selectOldestNonTerminalApplication", () => {
     ];
 
     // Act
-    const result = selectOldestNonTerminalApplication(
-      applications,
-      completionStatuses,
-    );
+    const result = selectApplication(applications);
 
     // Assert
     expect(result?.id).toBe("application-y-created-earlier");
@@ -77,7 +77,6 @@ describe("selectOldestNonTerminalApplication", () => {
 
   it("prefers a valid application date over blank or invalid application dates", () => {
     // Arrange
-    const completionStatuses = new Set(["approved", "denied"]);
     const applications = [
       createMockApplication({
         id: "application-blank-date",
@@ -100,10 +99,7 @@ describe("selectOldestNonTerminalApplication", () => {
     ];
 
     // Act
-    const result = selectOldestNonTerminalApplication(
-      applications,
-      completionStatuses,
-    );
+    const result = selectApplication(applications);
 
     // Assert
     expect(result?.id).toBe("application-valid-date");
@@ -111,7 +107,6 @@ describe("selectOldestNonTerminalApplication", () => {
 
   it("falls back to createdAt then id when application dates are blank or invalid", () => {
     // Arrange
-    const completionStatuses = new Set(["approved", "denied"]);
     const applications = [
       createMockApplication({
         id: "application-a-created-later",
@@ -134,10 +129,7 @@ describe("selectOldestNonTerminalApplication", () => {
     ];
 
     // Act
-    const result = selectOldestNonTerminalApplication(
-      applications,
-      completionStatuses,
-    );
+    const result = selectApplication(applications);
 
     // Assert
     expect(result?.id).toBe("application-y-created-earlier");
@@ -145,7 +137,6 @@ describe("selectOldestNonTerminalApplication", () => {
 
   it("returns null when every application is terminal", () => {
     // Arrange
-    const completionStatuses = new Set(["approved", "denied"]);
     const applications = [
       createMockApplication({
         id: "application-approved",
@@ -160,10 +151,7 @@ describe("selectOldestNonTerminalApplication", () => {
     ];
 
     // Act
-    const result = selectOldestNonTerminalApplication(
-      applications,
-      completionStatuses,
-    );
+    const result = selectApplication(applications);
 
     // Assert
     expect(result).toBeNull();

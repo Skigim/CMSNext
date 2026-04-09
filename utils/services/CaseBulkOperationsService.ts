@@ -81,6 +81,31 @@ export class CaseBulkOperationsService {
     this.fileStorage = config.fileStorage;
   }
 
+  private async readCurrentDataOrThrow(): Promise<NormalizedFileData> {
+    const currentData = await this.fileStorage.readFileData();
+    if (!currentData) {
+      throw new Error('Failed to read current data');
+    }
+
+    return currentData;
+  }
+
+  private getExistingCaseIds(cases: StoredCase[]): Set<string> {
+    return new Set(cases.map((caseItem) => caseItem.id));
+  }
+
+  private getNotFoundCaseIds(existingIds: Set<string>, requestedIds: string[]): string[] {
+    return requestedIds.filter((caseId) => !existingIds.has(caseId));
+  }
+
+  private touchUpdatedCases(
+    cases: StoredCase[],
+    changedCaseIds: string[],
+    timestamp: string,
+  ): StoredCase[] {
+    return this.fileStorage.touchCaseTimestamps(cases, changedCaseIds, timestamp);
+  }
+
   // =============================================================================
   // BULK DELETE OPERATIONS
   // =============================================================================
@@ -112,16 +137,13 @@ export class CaseBulkOperationsService {
     }
 
     // Read current data
-    const currentData = await this.fileStorage.readFileData();
-    if (!currentData) {
-      throw new Error('Failed to read current data');
-    }
+    const currentData = await this.readCurrentDataOrThrow();
 
     const idsToDelete = new Set(caseIds);
-    const existingIds = new Set(currentData.cases.map(c => c.id));
+    const existingIds = this.getExistingCaseIds(currentData.cases);
     
     // Track which IDs don't exist
-    const notFound = caseIds.filter(id => !existingIds.has(id));
+    const notFound = this.getNotFoundCaseIds(existingIds, caseIds);
     
     // Filter out cases and their associated data (including alerts)
     const updatedData: NormalizedFileData = {
@@ -175,10 +197,7 @@ export class CaseBulkOperationsService {
       return { updated: [], notFound: [] };
     }
 
-    const currentData = await this.fileStorage.readFileData();
-    if (!currentData) {
-      throw new Error("Failed to read current data");
-    }
+    const currentData = await this.readCurrentDataOrThrow();
 
     const idsToUpdate = new Set(caseIds);
     const timestamp = new Date().toISOString();
@@ -188,12 +207,8 @@ export class CaseBulkOperationsService {
     const notFound: string[] = [];
 
     // Track which IDs exist
-    const existingIds = new Set(currentData.cases.map(c => c.id));
-    caseIds.forEach(id => {
-      if (!existingIds.has(id)) {
-        notFound.push(id);
-      }
-    });
+    const existingIds = this.getExistingCaseIds(currentData.cases);
+    notFound.push(...this.getNotFoundCaseIds(existingIds, caseIds));
 
     // Update matching cases
     const casesWithChanges = currentData.cases.map(c => {
@@ -237,7 +252,7 @@ export class CaseBulkOperationsService {
       return updatedCase;
     });
 
-    const casesWithTouchedTimestamps = this.fileStorage.touchCaseTimestamps(
+    const casesWithTouchedTimestamps = this.touchUpdatedCases(
       casesWithChanges,
       changedCaseIds,
       timestamp,
@@ -293,10 +308,7 @@ export class CaseBulkOperationsService {
       return { updated: [], notFound: [] };
     }
 
-    const currentData = await this.fileStorage.readFileData();
-    if (!currentData) {
-      throw new Error("Failed to read current data");
-    }
+    const currentData = await this.readCurrentDataOrThrow();
 
     const idsToUpdate = new Set(caseIds);
     const timestamp = new Date().toISOString();
@@ -306,12 +318,8 @@ export class CaseBulkOperationsService {
     const notFound: string[] = [];
 
     // Track which IDs exist
-    const existingIds = new Set(currentData.cases.map(c => c.id));
-    caseIds.forEach(id => {
-      if (!existingIds.has(id)) {
-        notFound.push(id);
-      }
-    });
+    const existingIds = this.getExistingCaseIds(currentData.cases);
+    notFound.push(...this.getNotFoundCaseIds(existingIds, caseIds));
 
     // Update matching cases
     const casesWithChanges = currentData.cases.map(c => {
@@ -357,7 +365,7 @@ export class CaseBulkOperationsService {
       return updatedCase;
     });
 
-    const casesWithTouchedTimestamps = this.fileStorage.touchCaseTimestamps(
+    const casesWithTouchedTimestamps = this.touchUpdatedCases(
       casesWithChanges,
       changedCaseIds,
       timestamp,
@@ -409,15 +417,12 @@ export class CaseBulkOperationsService {
    */
   async importCases(cases: StoredCase[]): Promise<void> {
     // Read current data
-    const currentData = await this.fileStorage.readFileData();
-    if (!currentData) {
-      throw new Error('Failed to read current data');
-    }
+    const currentData = await this.readCurrentDataOrThrow();
 
     const timestamp = new Date().toISOString();
 
     // Build set of existing case IDs to detect duplicates
-    const existingIds = new Set(currentData.cases.map(c => c.id));
+    const existingIds = this.getExistingCaseIds(currentData.cases);
 
     // Validate, ensure unique IDs, and filter out duplicates
     const casesToImport = cases
@@ -445,7 +450,7 @@ export class CaseBulkOperationsService {
 
     const touchedCaseIds = casesToImport.map(caseItem => caseItem.id);
     const combinedCases = [...currentData.cases, ...casesToImport];
-    const casesWithTouchedTimestamps = this.fileStorage.touchCaseTimestamps(
+    const casesWithTouchedTimestamps = this.touchUpdatedCases(
       combinedCases,
       touchedCaseIds,
       timestamp,
@@ -538,10 +543,7 @@ export class CaseBulkOperationsService {
       return { resolvedCount: 0, caseCount: 0 };
     }
 
-    const currentData = await this.fileStorage.readFileData();
-    if (!currentData) {
-      throw new Error('Failed to read current data');
-    }
+    const currentData = await this.readCurrentDataOrThrow();
 
     const caseIdSet = new Set(caseIds);
     const timestamp = new Date().toISOString();
@@ -626,13 +628,10 @@ export class CaseBulkOperationsService {
       return { addedCount: 0 };
     }
 
-    const currentData = await this.fileStorage.readFileData();
-    if (!currentData) {
-      throw new Error('Failed to read current data');
-    }
+    const currentData = await this.readCurrentDataOrThrow();
 
     const timestamp = new Date().toISOString();
-    const existingCaseIds = new Set(currentData.cases.map(c => c.id));
+    const existingCaseIds = this.getExistingCaseIds(currentData.cases);
     const caseMap = new Map(currentData.cases.map(c => [c.id, c]));
 
     // Filter to only valid case IDs
@@ -685,7 +684,7 @@ export class CaseBulkOperationsService {
     });
 
     // Touch case timestamps
-    const casesWithTouchedTimestamps = this.fileStorage.touchCaseTimestamps(
+    const casesWithTouchedTimestamps = this.touchUpdatedCases(
       currentData.cases,
       validCaseIds,
       timestamp,

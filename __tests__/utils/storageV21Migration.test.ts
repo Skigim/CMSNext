@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  TEST_TRANSACTION_TIMESTAMP,
   createMockApplication,
   createMockNormalizedFileData,
   createMockPerson,
@@ -766,7 +767,6 @@ describe("storageV21Migration", () => {
 
   it("preserves canonical non-status fields when status-only sync updates a deterministic terminal application", () => {
     // ARRANGE
-    const transactionTimestamp = "2026-04-08T10:00:00.000Z";
     const preservedNewestTerminalApplication = createMockApplication({
       id: "application-2",
       caseId: "case-1",
@@ -858,7 +858,7 @@ describe("storageV21Migration", () => {
     const result = syncRuntimeApplications(runtimeData, {
       preferRuntimeCaseFields: true,
       syncMode: "status-only",
-      transactionTimestamp,
+      transactionTimestamp: TEST_TRANSACTION_TIMESTAMP,
     });
 
     // ASSERT
@@ -881,7 +881,7 @@ describe("storageV21Migration", () => {
         voterFormStatus: "requested",
         isIntakeCompleted: false,
       },
-      updatedAt: transactionTimestamp,
+      updatedAt: TEST_TRANSACTION_TIMESTAMP,
     });
     expect(result.applications.find((application) => application.id === "application-1")?.statusHistory).toEqual([
       {
@@ -894,7 +894,7 @@ describe("storageV21Migration", () => {
       expect.objectContaining({
         status: "Pending",
         effectiveDate: "2026-04-08",
-        changedAt: transactionTimestamp,
+        changedAt: TEST_TRANSACTION_TIMESTAMP,
         source: "user",
       }),
     ]);
@@ -957,8 +957,8 @@ describe("storageV21Migration", () => {
         cases: [
           createMockStoredCase({
             id: "case-1",
-      person: createMockPerson({
-        id: "person-1",
+            person: createMockPerson({
+              id: "person-1",
               familyMembers: [
                 "33333333-3333-4333-8333-333333333333",
                 "Unresolved Child",
@@ -966,13 +966,12 @@ describe("storageV21Migration", () => {
               createdAt: "2026-01-01T00:00:00.000Z",
               updatedAt: undefined,
             }),
-            people: undefined,
           }),
         ],
         financials: [],
         notes: [],
         alerts: [],
-        exported_at: "2026-03-01T00:00:00.000Z",
+        exported_at: "2026-01-01T00:00:00.000Z",
         total_cases: 1,
         categoryConfig: mergeCategoryConfig(),
         activityLog: [],
