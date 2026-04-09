@@ -20,7 +20,10 @@ import {
   type SetStateAction,
 } from "react";
 import { toast } from "sonner";
-import { selectOldestNonTerminalApplication } from "@/domain/applications";
+import {
+  normalizeRetroRequestedAt,
+  selectOldestNonTerminalApplication,
+} from "@/domain/applications";
 import { dateInputValueToISO, normalizePhoneNumber } from "@/domain/common";
 import { useDataManagerSafe } from "../contexts/DataManagerContext";
 import { useCategoryConfig } from "../contexts/CategoryConfigContext";
@@ -685,6 +688,31 @@ export function useIntakeWorkflow({
             householdMembers: normalizedHouseholdMembers,
           });
 
+        if (
+          isEditing &&
+          activeExistingCase &&
+          editableApplication &&
+          typeof dataManager.updateApplication === "function" &&
+          !areApplicationFieldsDisabled
+        ) {
+          await dataManager.updateApplication(activeExistingCase.id, editableApplication.id, {
+            applicationDate: caseRecord.applicationDate,
+            applicationType: caseRecord.applicationType ?? "",
+            hasWaiver: caseRecord.withWaiver ?? false,
+            retroRequestedAt: normalizeRetroRequestedAt(caseRecord.retroRequested),
+            retroMonths: [...(caseRecord.retroMonths ?? [])],
+            verification: {
+              isAppValidated: caseRecord.appValidated ?? false,
+              isAgedDisabledVerified: caseRecord.agedDisabledVerified ?? false,
+              isCitizenshipVerified: caseRecord.citizenshipVerified ?? false,
+              isResidencyVerified: caseRecord.residencyVerified ?? false,
+              avsConsentDate: caseRecord.avsConsentDate ?? "",
+              voterFormStatus: caseRecord.voterFormStatus ?? "",
+              isIntakeCompleted: caseRecord.intakeCompleted ?? true,
+            },
+          });
+        }
+
       logger.info(`Intake case ${isEditing ? "updated" : "created"}`, {
         caseId: savedCase.id,
       });
@@ -717,6 +745,7 @@ export function useIntakeWorkflow({
     areApplicationFieldsDisabled,
     dataManager,
     canSubmit,
+      editableApplication,
     formData,
     config,
     isEditing,

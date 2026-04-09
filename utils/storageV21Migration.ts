@@ -948,7 +948,6 @@ export function hydrateNormalizedData(
 export function dehydrateNormalizedData(
   data: RuntimeNormalizedFileDataV21,
 ): PersistedNormalizedFileDataV21 {
-  const { applications } = syncRuntimeApplications(data);
   const peopleRegistry = new Map<string, Person>();
 
   for (const person of data.people) {
@@ -969,7 +968,7 @@ export function dehydrateNormalizedData(
     version: "2.1",
     people: persistedPeople,
     cases: data.cases.map((caseItem) => dehydrateStoredCase(caseItem)),
-    applications: applications.map(normalizePersistedApplication),
+    applications: (data.applications ?? []).map(normalizePersistedApplication),
     financials: data.financials.map((financial) => ({ ...financial })),
     notes: data.notes.map((note) => ({ ...note })),
     alerts: data.alerts.map((alert) => ({ ...alert })),
@@ -1114,6 +1113,31 @@ export function migrateV20ToV21(data: NormalizedFileDataV20): PersistedNormalize
         },
         isPendingArchival: caseItem.isPendingArchival,
       };
+    }),
+    applications: data.cases.map((caseItem) => {
+      const migratedPersonId = casePersonIds.get(caseItem.id);
+      if (!migratedPersonId) {
+        throw new Error(`Missing migrated person ID for case ${caseItem.id}`);
+      }
+
+      return createMigratedApplication({
+        applicationId: uuidv4(),
+        initialHistoryId: uuidv4(),
+        caseId: caseItem.id,
+        applicantPersonId: migratedPersonId,
+        migratedAt: caseItem.updatedAt || caseItem.createdAt || data.exported_at,
+        caseRecord: {
+          ...caseItem.caseRecord,
+          id: caseItem.id,
+          personId: migratedPersonId,
+          financials: {
+            resources: [],
+            income: [],
+            expenses: [],
+          },
+          notes: [],
+        },
+      });
     }),
     financials: data.financials.map((financial) => ({ ...financial })),
     notes: data.notes.map((note) => ({ ...note })),

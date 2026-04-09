@@ -40,6 +40,7 @@ vi.mock("@/hooks/useDataSync", () => ({
 const mockDataManager = {
   createCompleteCase: vi.fn(),
   updateCompleteCase: vi.fn(),
+  updateApplication: vi.fn(),
   getAllPeople: vi.fn(),
   getApplicationsForCase: vi.fn(),
   getCaseById: vi.fn(),
@@ -149,6 +150,7 @@ describe("useIntakeWorkflow", () => {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     });
+      mockDataManager.updateApplication.mockResolvedValue(createMockApplication());
     // Keep people reads pending by default so tests that only care about
     // immediate mount state do not trigger avoidable async act warnings.
     mockDataManager.getAllPeople.mockImplementation(() => createPendingPromise());
@@ -1222,6 +1224,16 @@ describe("useIntakeWorkflow", () => {
         "case-edit-1",
         expect.objectContaining({
           caseRecord: expect.objectContaining({
+            avsConsentDate: "",
+          }),
+        }),
+      );
+      expect(mockDataManager.updateApplication).toHaveBeenCalledWith(
+        "case-edit-1",
+        "application-pending-1",
+        expect.objectContaining({
+          applicationDate: "2026-02-15",
+          verification: expect.objectContaining({
             avsConsentDate: "",
           }),
         }),

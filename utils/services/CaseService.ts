@@ -18,6 +18,7 @@ import type { FileStorageService, NormalizedFileData } from './FileStorageServic
 import { ActivityLogService } from './ActivityLogService';
 import { CaseBulkOperationsService } from './CaseBulkOperationsService';
 import { PersonService } from './PersonService';
+import { createCanonicalApplication } from '@/domain/applications';
 import { resolveCaseRecordIntakeCompleted } from '@/domain/cases';
 import { toLocalDateString } from '../../domain/common';
 import { formatCaseDisplayName } from '../../domain/cases/formatting';
@@ -486,19 +487,20 @@ export class CaseService {
     ]);
     const updatedPeople = updatedDataWithPeople.people;
     const newCases = [...currentData.cases, newCase];
+    const createdApplication = createCanonicalApplication({
+      applicationId: uuidv4(),
+      initialHistoryId: uuidv4(),
+      caseId,
+      applicantPersonId: personId,
+      createdAt: timestamp,
+      caseRecord: newCase.caseRecord,
+    });
 
     const updatedData: NormalizedFileData = {
       ...updatedDataWithPeople,
       people: updatedPeople,
       cases: newCases,
-      applications: syncRuntimeApplications(
-        {
-          ...updatedDataWithPeople,
-          people: updatedPeople,
-          cases: newCases,
-        },
-        true,
-      ).applications,
+      applications: [...(currentData.applications ?? []), createdApplication],
     };
 
     const writtenData = await this.fileStorage.writeNormalizedData(updatedData);
@@ -661,8 +663,6 @@ export class CaseService {
       },
       [updatedPerson, ...resolvedHouseholdMembers.map(({ person }) => person)],
     );
-
-    updatedData.applications = syncRuntimeApplications(updatedData, true).applications;
 
     await this.fileStorage.writeNormalizedData(updatedData);
 

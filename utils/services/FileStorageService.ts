@@ -22,9 +22,7 @@ import {
   hydrateNormalizedData,
   hydrateStoredCase,
   isPersistedNormalizedFileDataV21,
-  persistedCasesContainLegacyApplicationFields,
   selectDeterministicCanonicalApplication,
-  syncRuntimeApplications,
   type PersistedNormalizedFileDataV21,
 } from "../storageV21Migration";
 
@@ -413,22 +411,11 @@ export class FileStorageService {
     logger.debug("Detected normalized data format (v2.1)");
 
     const hydratedData = this.hydratePersistedRuntimeData(rawData);
-    const { canonicalData, shouldRewriteApplications } = this.syncReadApplications(
-      rawData,
+    const { normalizedData, hasFinancialMigration } = this.applyFinancialMigration(
       hydratedData,
     );
-    const { normalizedData, hasFinancialMigration } = this.applyFinancialMigration(
-      canonicalData,
-    );
 
-    if (shouldRewriteApplications) {
-      logger.info("Migrated workspace applications into canonical persisted records", {
-        caseCount: normalizedData.cases.length,
-        applicationCount: normalizedData.applications?.length ?? 0,
-      });
-    }
-
-    if (shouldRewriteApplications || hasFinancialMigration) {
+    if (hasFinancialMigration) {
       return await this.writeNormalizedData(normalizedData);
     }
 
@@ -450,28 +437,6 @@ export class FileStorageService {
           : "unknown hydration error";
       throw new LegacyFormatError(`${INVALID_V2_1_FORMAT_PREFIX}: ${hydrationError}`);
     }
-  }
-
-  private syncReadApplications(
-    rawData: PersistedNormalizedFileDataV21,
-    hydratedData: NormalizedFileData,
-  ): { canonicalData: NormalizedFileData; shouldRewriteApplications: boolean } {
-    const { applications: syncedApplications, hasChanged } =
-      syncRuntimeApplications(hydratedData);
-    const shouldRewriteApplications =
-      hasChanged ||
-      persistedCasesContainLegacyApplicationFields(rawData.cases) ||
-      ((rawData.applications?.length ?? 0) === 0 && rawData.cases.length > 0);
-
-    return {
-      canonicalData: hasChanged
-        ? {
-            ...hydratedData,
-            applications: syncedApplications,
-          }
-        : hydratedData,
-      shouldRewriteApplications,
-    };
   }
 
   private applyFinancialMigration(

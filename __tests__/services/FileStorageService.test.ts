@@ -192,7 +192,7 @@ describe("FileStorageService v2.1", () => {
     expect(mockFileService.writeFile).not.toHaveBeenCalled();
   });
 
-  it("migrates legacy case-embedded application fields into canonical applications on read", async () => {
+  it("hydrates explicit migrated applications on read without rewriting the workspace", async () => {
     // ARRANGE
     const migratedPersistedData = migrateV20ToV21({
       ...createMockNormalizedFileDataV20(),
@@ -234,12 +234,7 @@ describe("FileStorageService v2.1", () => {
       hasWaiver: true,
       retroRequestedAt: "2026-02-01",
     });
-    expect(mockFileService.broadcastDataUpdate).toHaveBeenCalledWith(result);
-    expect(mockFileService.writeFile).toHaveBeenCalledTimes(1);
-    const writtenData = mockFileService.writeFile.mock.calls[0][0];
-    expect(writtenData.applications).toHaveLength(1);
-    expect(writtenData.cases[0].caseRecord).not.toHaveProperty("applicationDate");
-    expect(writtenData.cases[0].caseRecord).not.toHaveProperty("withWaiver");
+    expect(mockFileService.writeFile).not.toHaveBeenCalled();
   });
 
   it("rejects invalid persisted v2.1 payloads that fail hydration", async () => {
@@ -306,7 +301,7 @@ describe("FileStorageService v2.1", () => {
       id: "person-1",
       name: "Migrated Workspace",
     });
-    expect(mockFileService.writeFile).toHaveBeenCalledTimes(1);
+    expect(mockFileService.writeFile).not.toHaveBeenCalled();
   });
 
   it("hydrates dehydrated writes from the canonical terminal application order instead of the first match", async () => {
@@ -408,11 +403,7 @@ describe("FileStorageService v2.1", () => {
     expect(writtenData.cases[0].people).toEqual([
       { personId: "person-1", role: "applicant", isPrimary: true },
     ]);
-    expect(writtenData.applications).toHaveLength(1);
-    expect(writtenData.applications[0]).toMatchObject({
-      caseId: "case-1",
-      applicantPersonId: "person-1",
-    });
+    expect(writtenData.applications).toEqual([]);
     expect(writtenData.cases[0].caseRecord).not.toHaveProperty("applicationDate");
     expect(writtenData.cases[0].caseRecord).not.toHaveProperty("applicationType");
     expect(writtenData.cases[0].caseRecord).not.toHaveProperty("withWaiver");

@@ -307,7 +307,7 @@ describe("storageV21Migration", () => {
     expect(dehydrated.applications?.[0].verification).not.toHaveProperty("legacyFlag");
   });
 
-  it("writes intakeCompleted as true when dehydrating historical runtime cases without the field", () => {
+  it("does not synthesize applications when dehydrating historical runtime cases without the field", () => {
     // ARRANGE
     const runtimeCase = createMockStoredCase();
     delete (runtimeCase.caseRecord as { intakeCompleted?: boolean }).intakeCompleted;
@@ -328,12 +328,10 @@ describe("storageV21Migration", () => {
     const dehydrated = dehydrateNormalizedData(runtimeData);
 
     // ASSERT
-    expect(dehydrated.applications).toBeDefined();
-    expect(dehydrated.applications).toHaveLength(1);
-    expect(dehydrated.applications![0].verification.isIntakeCompleted).toBe(true);
+    expect(dehydrated.applications).toEqual([]);
   });
 
-  it("stores applications canonically and strips application-owned case fields during dehydration", () => {
+  it("does not synthesize applications during dehydration when runtime data has none", () => {
     // ARRANGE
     const runtimeCase = createMockStoredCase({
       id: "case-1",
@@ -364,13 +362,7 @@ describe("storageV21Migration", () => {
     });
 
     // ASSERT
-    expect(dehydrated.applications).toHaveLength(1);
-    expect(dehydrated.applications?.[0]).toMatchObject({
-      caseId: "case-1",
-      applicationType: "Renewal",
-      hasWaiver: true,
-      retroRequestedAt: "2026-02-01",
-    });
+    expect(dehydrated.applications).toEqual([]);
     expect(dehydrated.cases[0].caseRecord).not.toHaveProperty("applicationDate");
     expect(dehydrated.cases[0].caseRecord).not.toHaveProperty("retroRequested");
     expect(dehydrated.cases[0].caseRecord).not.toHaveProperty("withWaiver");

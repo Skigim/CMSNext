@@ -100,7 +100,7 @@ interface PersistedNormalizedFileDataV21 {
 
 > **Naming convention note:** The mixed use of `StoredPerson` and `PersistedCase` reflects the evolution of the type system. `StoredPerson` distinguishes the persisted shape from the hydrated `Person` (which includes circular references), while `PersistedCase` distinguishes the on-disk format from `StoredCase` (the hydrated runtime case). This intentional distinction helps developers understand the different transformation layers.
 
-Persisted v2.1 data is hydrated and dehydrated through the storage helpers. Normal runtime reads now accept only canonical persisted v2.1 workspaces; legacy v2.0 and older formats must be upgraded first with the explicit migration tooling.
+Persisted v2.1 data is hydrated and dehydrated through the storage helpers. Normal runtime reads now accept only canonical persisted v2.1 workspaces; legacy v2.0 and older formats must be upgraded first with the explicit migration tooling. Normal saves no longer synthesize canonical `applications[]` from case-embedded compatibility fields, so application ownership must be written explicitly by the owning create/edit flows.
 
 ### Case-model surfaces
 
