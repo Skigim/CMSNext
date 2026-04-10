@@ -65,23 +65,25 @@ export interface CreateCanonicalApplicationInput {
   caseId: string;
   applicantPersonId: string;
   createdAt: string;
-  caseRecord: Pick<
-    CaseRecord,
-    | "applicationDate"
-    | "applicationType"
-    | "withWaiver"
-    | "retroRequested"
-    | "appValidated"
-    | "retroMonths"
-    | "agedDisabledVerified"
-    | "citizenshipVerified"
-    | "residencyVerified"
-    | "avsConsentDate"
-    | "voterFormStatus"
-    | "intakeCompleted"
-    | "status"
-  >;
+  caseRecord: CanonicalApplicationCaseRecord;
 }
+
+type CanonicalApplicationCaseRecord = Pick<
+  CaseRecord,
+  | "applicationDate"
+  | "applicationType"
+  | "withWaiver"
+  | "retroRequested"
+  | "appValidated"
+  | "retroMonths"
+  | "agedDisabledVerified"
+  | "citizenshipVerified"
+  | "residencyVerified"
+  | "avsConsentDate"
+  | "voterFormStatus"
+  | "intakeCompleted"
+  | "status"
+>;
 
 export function deriveMigratedApplicationStatus(
   caseRecord: Pick<CaseRecord, "status">,
@@ -102,7 +104,7 @@ export function normalizeRetroRequestedAt(
 }
 
 export function pickApplicationOwnedCaseRecordFields(
-  caseRecord: CaseRecord,
+  caseRecord: CanonicalApplicationCaseRecord,
 ): ApplicationOwnedCaseRecordSnapshot {
   return {
     applicationDate: caseRecord.applicationDate,
@@ -188,9 +190,7 @@ export function createMigratedApplication(
 export function createCanonicalApplication(
   input: CreateCanonicalApplicationInput,
 ): Application {
-  const applicationFields = pickApplicationOwnedCaseRecordFields(
-    input.caseRecord as CaseRecord,
-  );
+  const applicationFields = pickApplicationOwnedCaseRecordFields(input.caseRecord);
   const status = input.caseRecord.status;
 
   return {

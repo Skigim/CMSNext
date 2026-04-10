@@ -80,13 +80,14 @@ The main workspace file is:
 case-tracker-data.json
 ```
 
-The app currently persists a canonical normalized v2.1 format with flat collections and foreign keys:
+The app currently persists a canonical normalized v2.2 format with flat collections and foreign keys:
 
 ```ts
-interface PersistedNormalizedFileDataV21 {
-  version: "2.1";
+interface PersistedNormalizedFileDataV22 {
+  version: "2.2";
   people: StoredPerson[]; // Note: uses StoredPerson, not PersistedPerson
   cases: PersistedCase[]; // Note: uses PersistedCase, not StoredCase
+  applications: Application[];
   financials: StoredFinancialItem[];
   notes: StoredNote[];
   alerts: AlertRecord[];
@@ -100,7 +101,7 @@ interface PersistedNormalizedFileDataV21 {
 
 > **Naming convention note:** The mixed use of `StoredPerson` and `PersistedCase` reflects the evolution of the type system. `StoredPerson` distinguishes the persisted shape from the hydrated `Person` (which includes circular references), while `PersistedCase` distinguishes the on-disk format from `StoredCase` (the hydrated runtime case). This intentional distinction helps developers understand the different transformation layers.
 
-Persisted v2.1 data is hydrated and dehydrated through the storage helpers. Normal runtime reads now accept only canonical persisted v2.1 workspaces; legacy v2.0 and older formats must be upgraded first with the explicit migration tooling. Normal saves no longer synthesize canonical `applications[]` from case-embedded compatibility fields, so application ownership must be written explicitly by the owning create/edit flows.
+Persisted v2.2 data is hydrated and dehydrated through the storage helpers. Normal runtime reads now accept only canonical persisted v2.2 workspaces; legacy v2.1, v2.0, and older formats must be upgraded first with the explicit migration tooling. The generic read/dehydrate path no longer synthesizes canonical `applications[]` from case-embedded compatibility fields, so application ownership is expected to be written by the owning create/edit flows. During the v2.2 cutover, some service-level mutation paths still reconcile canonical applications alongside case updates.
 
 ### Case-model surfaces
 
@@ -108,11 +109,11 @@ When working on case-model changes, distinguish these three layers:
 
 1. **Canonical persisted model** — the file on disk stores normalized top-level collections and uses persisted types such as `PersistedCase` and `StoredPerson`. This is the source of truth for storage work.
 2. **Hydrated runtime/workspace model** — `FileStorageService` and `CaseService` resolve persisted references into runtime shapes such as `NormalizedFileData`, `StoredCase`, and the overlapping `CaseDisplay` surface used by current UI flows. This is the target for runtime UI and workspace behavior.
-3. **Compatibility/transitional type surface** — `CaseRecord` and related compatibility-oriented fields still exist to bridge older flows and current type debt. `CaseRecord` is **not** the canonical persisted v2.1 case model.
+3. **Compatibility/transitional type surface** — `CaseRecord` and related compatibility-oriented fields still exist to bridge older flows and current type debt. `CaseRecord` is **not** the canonical persisted v2.2 case model.
 
 Current `CaseRecord` guidance:
 
-- `financials` and `notes` are stale compatibility debt; canonical v2.1 stores them in top-level `financials[]` and `notes[]`, not inside each case.
+- `financials` and `notes` are stale compatibility debt; canonical v2.2 stores them in top-level `financials[]` and `notes[]`, not inside each case.
 - `personId` and `spouseId` are still active compatibility scaffolding in some flows, but authoritative person linkage is `PersistedCase.people[]`, with runtime hydration exposing `person` and `linkedPeople`.
 - Other case metadata on `CaseRecord` can still be active, so contributors should remove or reshape only the explicitly transitional fields rather than treating the whole type as dead.
 
