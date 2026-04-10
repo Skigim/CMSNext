@@ -1182,6 +1182,9 @@ export function migrateV20ToV21(data: NormalizedFileDataV20): PersistedNormalize
           ...caseItem.caseRecord,
           id: caseItem.id,
           personId: migratedPersonId,
+          intakeCompleted: resolveCaseRecordIntakeCompleted(
+            caseItem.caseRecord.intakeCompleted,
+          ),
           financials: {
             resources: [],
             income: [],
@@ -1209,6 +1212,7 @@ export function migrateV21ToV22(
   const syncedData = syncRuntimeApplications(hydratedData, {
     preferRuntimeCaseFields: true,
     syncMode: "full",
+    transactionTimestamp: data.exported_at,
   });
 
   return dehydrateNormalizedData({

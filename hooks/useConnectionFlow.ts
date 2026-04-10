@@ -180,8 +180,9 @@ export function useConnectionFlow({
       toast.success(msg, { id: "connection-success" });
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unknown error";
-      setError(`Failed to load cases: ${message}`);
-      toast.error(`Failed to load cases: ${message}`, { id: "connection-error" });
+      const connectionErrorMessage = `Failed to complete workspace connection: ${message}`;
+      setError(connectionErrorMessage);
+      toast.error(connectionErrorMessage, { id: "connection-error" });
     }
   }, [dataManager, loadCases, setCases, setHasLoadedData, setError, service]);
 

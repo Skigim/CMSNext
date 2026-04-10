@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { migrateLegacyData } from "@/utils/legacyMigration";
+import { getFormatDescription, migrateLegacyData } from "@/utils/legacyMigration";
 import {
   createMockPerson,
   createMockPersistedNormalizedFileDataV21,
@@ -9,6 +9,11 @@ import {
 import { mergeCategoryConfig } from "@/types/categoryConfig";
 
 describe("legacyMigration", () => {
+  it("describes v2.2 payloads as the current normalized format", () => {
+    expect(getFormatDescription("v2.2")).toBe("v2.2 Normalized Format (current)");
+    expect(getFormatDescription("v2.1")).toBe("v2.1 Normalized Format (upgrade required)");
+  });
+
   it("hydrates persisted v2.1 data before returning it without success-path errors", () => {
     const runtimeCase = createMockStoredCase({
       id: "case-1",

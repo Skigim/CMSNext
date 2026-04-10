@@ -110,4 +110,48 @@ describe("useConnectionFlow", () => {
     expect(setHasLoadedData).toHaveBeenCalledWith(true);
     expect(setError).toHaveBeenCalledWith(null);
   });
+
+  it("reports workspace connection failures when migration fails before cases load", async () => {
+    // ARRANGE
+    const migrateWorkspaceToV22 = vi.fn().mockRejectedValue(new Error("migration exploded"));
+    const loadCases = vi.fn();
+    const setCases = vi.fn();
+    const setError = vi.fn();
+    const setHasLoadedData = vi.fn();
+    const mockDataManager = {
+      migrateWorkspaceToV22,
+    } as unknown as DataManager;
+
+    const { result } = renderHook(() =>
+      useConnectionFlow({
+        isSupported: true,
+        hasLoadedData: false,
+        connectionState: createMockFileStorageLifecycleSelectors(),
+        service: null,
+        fileStorageService: null,
+        dataManager: mockDataManager,
+        loadCases,
+        setCases,
+        setError,
+        setHasLoadedData,
+      }),
+    );
+
+    // ACT
+    await act(async () => {
+      await result.current.handleConnectionComplete();
+    });
+
+    // ASSERT
+    expect(loadCases).not.toHaveBeenCalled();
+    expect(setCases).not.toHaveBeenCalled();
+    expect(setHasLoadedData).not.toHaveBeenCalled();
+    expect(setError).toHaveBeenCalledWith(
+      "Failed to complete workspace connection: migration exploded",
+    );
+    expect(mockToast.error).toHaveBeenCalledWith(
+      "Failed to complete workspace connection: migration exploded",
+      expect.objectContaining({ id: "connection-error" }),
+    );
+  });
 });

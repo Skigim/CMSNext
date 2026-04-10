@@ -19,6 +19,7 @@ import {
   isPersistedNormalizedFileDataV20,
   isPersistedNormalizedFileDataV21,
   migrateV20ToV21,
+  migrateV21ToV22,
   normalizePersistedApplication,
   persistedCasesContainLegacyApplicationFields,
   syncRuntimeApplications,
@@ -1005,6 +1006,80 @@ describe("storageV21Migration", () => {
     });
 
     expect(migrated.people[0].updatedAt).toBe(explicitUpdatedAt);
+  });
+
+  it("normalizes missing intakeCompleted when creating migrated applications from v2.0 cases", () => {
+    // ARRANGE
+    const runtimeCase = createMockStoredCase({
+      id: "case-1",
+      person: createMockPerson({ id: "person-1" }),
+      people: [{ personId: "person-1", role: "applicant", isPrimary: true }],
+    });
+    delete (runtimeCase.caseRecord as { intakeCompleted?: boolean }).intakeCompleted;
+
+    // ACT
+    const migrated = migrateV20ToV21({
+      version: "2.0",
+      cases: [runtimeCase],
+      financials: [],
+      notes: [],
+      alerts: [],
+      exported_at: "2026-03-01T00:00:00.000Z",
+      total_cases: 1,
+      categoryConfig: mergeCategoryConfig(),
+      activityLog: [],
+    });
+
+    // ASSERT
+    const [migratedApplication] = migrated.applications ?? [];
+
+    expect(migrated.applications).toHaveLength(1);
+    expect(migratedApplication?.verification.isIntakeCompleted).toBe(true);
+  });
+
+  it("uses exported_at as the deterministic timestamp when upgrading v2.1 to v2.2", () => {
+    // ARRANGE
+    const exportedAt = "2026-03-01T00:00:00.000Z";
+    const runtimeCase = createMockStoredCase({
+      id: "case-1",
+      status: "Pending",
+      person: createMockPerson({ id: "person-1" }),
+      people: [{ personId: "person-1", role: "applicant", isPrimary: true }],
+      caseRecord: {
+        ...createMockStoredCase().caseRecord,
+        personId: "person-1",
+        status: "Pending",
+        applicationDate: "2026-02-15",
+      },
+    });
+    const persistedV21 = createMockPersistedNormalizedFileDataV21({
+      people: [runtimeCase.person],
+      cases: [runtimeCase],
+      financials: [],
+      notes: [],
+      alerts: [],
+      exported_at: exportedAt,
+      total_cases: 1,
+      categoryConfig: mergeCategoryConfig(),
+      activityLog: [],
+    });
+
+    // ACT
+    const migrated = migrateV21ToV22(persistedV21);
+
+    // ASSERT
+    const [migratedApplication] = migrated.applications ?? [];
+
+    expect(migrated.applications).toHaveLength(1);
+    expect(migratedApplication).toMatchObject({
+      createdAt: exportedAt,
+      updatedAt: exportedAt,
+      statusHistory: [
+        expect.objectContaining({
+          changedAt: exportedAt,
+        }),
+      ],
+    });
   });
 
   it("round-trips runtime v2.1 data through dehydration and hydration without losing linked people", () => {

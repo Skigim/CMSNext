@@ -511,7 +511,9 @@ export function getFormatDescription(format: ReturnType<typeof detectDataFormat>
     case "v2.0":
       return "v2.0 Normalized Format";
     case "v2.1":
-      return "v2.1 Normalized Format (current)";
+      return "v2.1 Normalized Format (upgrade required)";
+    case "v2.2":
+      return "v2.2 Normalized Format (current)";
     case "v1.x-nested":
       return "v1.x Nested Format (legacy)";
     case "nightingale-raw":
