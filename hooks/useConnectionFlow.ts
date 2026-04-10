@@ -5,6 +5,7 @@ import type AutosaveFileService from "../utils/AutosaveFileService";
 import type { FileStorageService } from "@/utils/services/FileStorageService";
 import type { DataManager } from "../utils/DataManager";
 import type { FileStorageLifecycleSelectors } from "../contexts/FileStorageContext";
+import type { WorkspaceMigrationReport } from "@/utils/workspaceV21Migration";
 
 interface UseConnectionFlowParams {
   isSupported: boolean | undefined;
@@ -24,6 +25,26 @@ interface UseConnectionFlowResult {
   showConnectModal: boolean;
   handleConnectionComplete: () => void | Promise<void>;
   dismissConnectModal: () => void;
+  workspaceUpgradeNoticeKind: "migrated" | "current" | null;
+  acknowledgeWorkspaceUpgradeNotice: () => void;
+}
+
+function getWorkspaceUpgradeNoticeKind(
+  migrationReport: WorkspaceMigrationReport | null,
+): "migrated" | "current" | null {
+  if (!migrationReport) {
+    return null;
+  }
+
+  if (migrationReport.files.some((file) => file.disposition === "migrated")) {
+    return "migrated";
+  }
+
+  if (migrationReport.files.some((file) => file.disposition === "already-current")) {
+    return "current";
+  }
+
+  return null;
 }
 
 /**
@@ -97,8 +118,10 @@ export function useConnectionFlow({
   markWorkspaceReady,
 }: UseConnectionFlowParams): UseConnectionFlowResult {
   const [dismissedModalKey, setDismissedModalKey] = useState<string | null>(null);
+  const [workspaceUpgradeNoticeKind, setWorkspaceUpgradeNoticeKind] = useState<
+    "migrated" | "current" | null
+  >(null);
   const lastErrorRef = useRef<number | null>(null);
-  const hasShownWorkspaceUpgradeNoticeRef = useRef(false);
 
   const {
     lifecycle,
@@ -155,14 +178,7 @@ export function useConnectionFlow({
       const migrationReport = dataManager
         ? await dataManager.migrateWorkspaceToV22()
         : null;
-
-      if (migrationReport?.summary.migrated && !hasShownWorkspaceUpgradeNoticeRef.current) {
-        hasShownWorkspaceUpgradeNoticeRef.current = true;
-        toast.info("Workspace upgraded to v2.2", {
-          id: "workspace-upgraded",
-          description: "Your saved data was upgraded to the new canonical workspace format.",
-        });
-      }
+      const upgradeNoticeKind = getWorkspaceUpgradeNoticeKind(migrationReport);
 
       // Load cases into app state
       const loadedCases = await loadCases();
@@ -171,6 +187,7 @@ export function useConnectionFlow({
       setHasLoadedData(true);
       setDismissedModalKey(null);
       setError(null);
+      setWorkspaceUpgradeNoticeKind(upgradeNoticeKind);
       
       // Start autosave if not already running
       if (service && !service.getStatus().isRunning) {
@@ -239,5 +256,15 @@ export function useConnectionFlow({
     setDismissedModalKey(modalStateKey);
   }, [modalStateKey]);
 
-  return { showConnectModal, handleConnectionComplete, dismissConnectModal };
+  const acknowledgeWorkspaceUpgradeNotice = useCallback(() => {
+    setWorkspaceUpgradeNoticeKind(null);
+  }, []);
+
+  return {
+    showConnectModal,
+    handleConnectionComplete,
+    dismissConnectModal,
+    workspaceUpgradeNoticeKind,
+    acknowledgeWorkspaceUpgradeNotice,
+  };
 }

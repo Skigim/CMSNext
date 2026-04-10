@@ -24,6 +24,7 @@ import { formatCaseDisplayName } from "../../domain/cases";
 import type { CaseCategory, StoredCase, FinancialItem, NewNoteData } from "../../types/case";
 import type { AlertWithMatch } from "../../utils/alertsData";
 import type { CaseListSegment } from "@/hooks/useCaseListPreferences";
+import { WorkspaceUpgradeNoticeModal } from "@/components/modals/WorkspaceUpgradeNoticeModal";
 
 export const AppContent = memo(function AppContent() {
   const { isSupported, hasStoredHandle, markWorkspaceReady, service, fileStorageService } = useFileStorage();
@@ -154,6 +155,8 @@ export const AppContent = memo(function AppContent() {
     showConnectModal,
     handleConnectionComplete,
     dismissConnectModal,
+    workspaceUpgradeNoticeKind,
+    acknowledgeWorkspaceUpgradeNotice,
   } = useConnectionFlow({
     isSupported,
     hasLoadedData,
@@ -525,7 +528,16 @@ export const AppContent = memo(function AppContent() {
 
   return (
     <Profiler id="AppContent" onRender={handleAppRenderProfile}>
-      <AppContentView {...appContentViewProps} />
+      <>
+        <AppContentView {...appContentViewProps} />
+        {workspaceUpgradeNoticeKind ? (
+          <WorkspaceUpgradeNoticeModal
+            isOpen
+            noticeKind={workspaceUpgradeNoticeKind}
+            onAcknowledge={acknowledgeWorkspaceUpgradeNotice}
+          />
+        ) : null}
+      </>
     </Profiler>
   );
 });
