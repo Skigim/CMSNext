@@ -17,6 +17,7 @@ interface UseConnectionFlowParams {
   setCases: React.Dispatch<React.SetStateAction<StoredCase[]>>;
   setError: React.Dispatch<React.SetStateAction<string | null>>;
   setHasLoadedData: React.Dispatch<React.SetStateAction<boolean>>;
+  markWorkspaceReady: () => void;
 }
 
 interface UseConnectionFlowResult {
@@ -93,6 +94,7 @@ export function useConnectionFlow({
   setCases,
   setError,
   setHasLoadedData,
+  markWorkspaceReady,
 }: UseConnectionFlowParams): UseConnectionFlowResult {
   const [dismissedModalKey, setDismissedModalKey] = useState<string | null>(null);
   const lastErrorRef = useRef<number | null>(null);
@@ -164,6 +166,7 @@ export function useConnectionFlow({
 
       // Load cases into app state
       const loadedCases = await loadCases();
+      markWorkspaceReady();
       setCases(loadedCases);
       setHasLoadedData(true);
       setDismissedModalKey(null);
@@ -184,7 +187,7 @@ export function useConnectionFlow({
       setError(connectionErrorMessage);
       toast.error(connectionErrorMessage, { id: "connection-error" });
     }
-  }, [dataManager, loadCases, setCases, setHasLoadedData, setError, service]);
+  }, [dataManager, loadCases, markWorkspaceReady, setCases, setHasLoadedData, setError, service]);
 
   // Modal visibility and error sync effect
   useEffect(() => {

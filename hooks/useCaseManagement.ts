@@ -3,7 +3,7 @@ import { useIsMounted } from './useIsMounted';
 import { useCaseOperations } from './useCaseOperations';
 import { useCaseArchival } from './useCaseArchival';
 import { NewPersonData, NewCaseRecordData, NewNoteData, StoredCase, StoredNote } from '@/types/case';
-import { useDataManagerSafe } from '@/contexts/DataManagerContext';
+import { useStartupDataManagerSafe } from '@/contexts/DataManagerContext';
 import type { UseCaseArchivalReturn } from './useCaseArchival';
 
 /**
@@ -145,7 +145,7 @@ interface UseCaseManagementReturn {
  */
 export function useCaseManagement(): UseCaseManagementReturn {
   const isMounted = useIsMounted();
-  const dataManager = useDataManagerSafe();
+  const dataManager = useStartupDataManagerSafe();
   
   const [cases, setCases] = useState<StoredCase[]>([]);
   const [loading, setLoading] = useState(false);

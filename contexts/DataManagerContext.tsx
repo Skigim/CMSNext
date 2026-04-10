@@ -12,6 +12,8 @@ import { createLogger } from '@/utils/logger';
 interface DataManagerContextType {
   /** Instance of DataManager, or null if file service not connected */
   dataManager: DataManager | null;
+  /** Whether startup migration and initial workspace load have completed */
+  isWorkspaceReady: boolean;
 }
 
 const DataManagerContext = createContext<DataManagerContextType | null>(null);
@@ -82,7 +84,7 @@ interface DataManagerProviderProps {
  * @see {@link DataManager} for available operations
  */
 export function DataManagerProvider({ children }: Readonly<DataManagerProviderProps>) {
-  const { service, fileStorageService, isConnected, status } = useFileStorage();
+  const { service, fileStorageService, isConnected, isWorkspaceReady, status } = useFileStorage();
   const encryption = useEncryption();
   const isMigrationCompleted = useRef(false);
   const isMigrationInProgress = useRef(false);
@@ -113,7 +115,13 @@ export function DataManagerProvider({ children }: Readonly<DataManagerProviderPr
 
   // Run financial history migration once when connected
   useEffect(() => {
-    if (!dataManager || !isConnected || isMigrationCompleted.current || isMigrationInProgress.current) return;
+    if (
+      !dataManager ||
+      !isConnected ||
+      !isWorkspaceReady ||
+      isMigrationCompleted.current ||
+      isMigrationInProgress.current
+    ) return;
     if (
       encryption.isEncryptionEnabled &&
       encryption.fileEncryptionStatus !== 'unencrypted' &&
@@ -147,10 +155,14 @@ export function DataManagerProvider({ children }: Readonly<DataManagerProviderPr
     encryption.isEncryptionEnabled,
     encryption.isStartupUnlockReady,
     isConnected,
+    isWorkspaceReady,
     migrationRetryKey,
   ]);
 
-  const contextValue = useMemo(() => ({ dataManager }), [dataManager]);
+  const contextValue = useMemo(
+    () => ({ dataManager, isWorkspaceReady }),
+    [dataManager, isWorkspaceReady],
+  );
 
   return (
     <DataManagerContext.Provider value={contextValue}>
@@ -189,7 +201,7 @@ export function useDataManager() {
     throw new Error('useDataManager must be used within a DataManagerProvider');
   }
   
-  if (!context.dataManager) {
+  if (!context.dataManager || !context.isWorkspaceReady) {
     throw new Error('DataManager is not available - file service not connected');
   }
   
@@ -222,6 +234,20 @@ export function useDataManager() {
  * @see {@link useDataManager} for throwing alternative (stricter)
  */
 export function useDataManagerSafe() {
+  const context = useContext(DataManagerContext);
+  if (!context?.isWorkspaceReady) {
+    return null;
+  }
+
+  return context.dataManager || null;
+}
+
+/**
+ * Hook to access DataManager during startup flows before workspace readiness is published.
+ *
+ * This is reserved for the startup migration and initial case-load path.
+ */
+export function useStartupDataManagerSafe() {
   const context = useContext(DataManagerContext);
   return context?.dataManager || null;
 }

@@ -4,7 +4,7 @@ import type { ProfilerOnRenderCallback } from "react";
 type ExtendedProfilerArgs = [...Parameters<ProfilerOnRenderCallback>, Set<unknown>?, number?];
 type ExtendedProfilerOnRenderCallback = (...args: ExtendedProfilerArgs) => void;
 import { useFileStorage, useFileStorageLifecycleSelectors } from "../../contexts/FileStorageContext";
-import { useDataManagerSafe } from "../../contexts/DataManagerContext";
+import { useStartupDataManagerSafe } from "../../contexts/DataManagerContext";
 import { useCategoryConfig } from "../../contexts/CategoryConfigContext";
 import {
   useAlertsFlow,
@@ -26,9 +26,9 @@ import type { AlertWithMatch } from "../../utils/alertsData";
 import type { CaseListSegment } from "@/hooks/useCaseListPreferences";
 
 export const AppContent = memo(function AppContent() {
-  const { isSupported, hasStoredHandle, service, fileStorageService } = useFileStorage();
+  const { isSupported, hasStoredHandle, markWorkspaceReady, service, fileStorageService } = useFileStorage();
   const connectionState = useFileStorageLifecycleSelectors();
-  const dataManager = useDataManagerSafe();
+  const dataManager = useStartupDataManagerSafe();
 
   const {
     cases,
@@ -165,6 +165,7 @@ export const AppContent = memo(function AppContent() {
     setCases,
     setError,
     setHasLoadedData,
+    markWorkspaceReady,
   });
 
   const {

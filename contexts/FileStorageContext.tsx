@@ -71,6 +71,8 @@ interface FileStorageContextType {
   lastError: FileStorageErrorInfo | null;
   /** Current autosave status with statistics */
   status: FileStorageStatus | null;
+  /** Whether the workspace has completed startup migration and initial data load */
+  isWorkspaceReady: boolean;
   /** Connect to a new folder using directory picker */
   connectToFolder: () => Promise<boolean>;
   /** Restore connection to previously selected folder */
@@ -93,6 +95,8 @@ interface FileStorageContextType {
   loadDataFromFile: (fileName: string) => Promise<unknown>;
   /** Register callback for when data is loaded from file - returns cleanup function */
   registerDataLoadHandler: (handler: (data: unknown) => void) => () => void;
+  /** Mark workspace startup as complete after migration and initial data load */
+  markWorkspaceReady: () => void;
 }
 
 const FileStorageContext = createContext<FileStorageContextType | null>(null);
@@ -194,6 +198,7 @@ export function FileStorageProvider({
   getDataFunction
 }: Readonly<FileStorageProviderProps>) {
   const [state, dispatch] = useReducer(reduceFileStorageState, initialMachineState);
+  const [isWorkspaceReady, setIsWorkspaceReady] = useState(false);
   const dataLoadHandlersRef = useRef(new Set<(data: unknown) => void>());
 
   const service = useMemo(() => {
@@ -325,6 +330,7 @@ export function FileStorageProvider({
 
   const connectToFolder = useCallback(async (): Promise<boolean> => {
     if (!service) return false;
+    setIsWorkspaceReady(false);
     dispatch({ type: 'CONNECT_REQUESTED' });
     try {
       const success = await service.connect();
@@ -356,6 +362,7 @@ export function FileStorageProvider({
       logger.warn('connectToExisting called without service');
       return false;
     }
+    setIsWorkspaceReady(false);
     dispatch({ type: 'CONNECT_REQUESTED' });
     try {
       const success = await service.connectToExisting();
@@ -385,8 +392,13 @@ export function FileStorageProvider({
   const disconnect = useCallback(async (): Promise<void> => {
     if (!service) return;
     await service.disconnect();
+    setIsWorkspaceReady(false);
     dispatch({ type: 'DISCONNECTED' });
   }, [dispatch, service]);
+
+  const markWorkspaceReady = useCallback(() => {
+    setIsWorkspaceReady(true);
+  }, []);
 
   const saveNow = useCallback(async (): Promise<void> => {
     if (!service) return;
@@ -478,6 +490,7 @@ export function FileStorageProvider({
     permissionStatus: state.permissionStatus,
     lastError: state.lastError,
     status: state.statusSnapshot,
+    isWorkspaceReady,
     connectToFolder,
     connectToExisting,
     disconnect,
@@ -489,15 +502,18 @@ export function FileStorageProvider({
     loadExistingData,
     loadDataFromFile,
     registerDataLoadHandler,
+    markWorkspaceReady,
   }), [
     connectToExisting,
     connectToFolder,
     disconnect,
     ensurePermission,
     fileStorageService,
+    isWorkspaceReady,
     listDataFiles,
     loadDataFromFile,
     loadExistingData,
+    markWorkspaceReady,
     readNamedFile,
     registerDataLoadHandler,
     saveNow,

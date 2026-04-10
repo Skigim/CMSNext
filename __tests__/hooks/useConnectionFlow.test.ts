@@ -60,6 +60,7 @@ describe("useConnectionFlow", () => {
     const setCases = vi.fn();
     const setError = vi.fn();
     const setHasLoadedData = vi.fn();
+    const markWorkspaceReady = vi.fn();
     const mockDataManager = {
       migrateWorkspaceToV22,
     } as unknown as DataManager;
@@ -74,6 +75,7 @@ describe("useConnectionFlow", () => {
       setCases,
       setError,
       setHasLoadedData,
+      markWorkspaceReady,
     };
 
     const { result, rerender } = renderHook(
@@ -106,6 +108,10 @@ describe("useConnectionFlow", () => {
       loadCases.mock.invocationCallOrder[0],
     );
     expect(loadCases).toHaveBeenCalledTimes(2);
+    expect(markWorkspaceReady).toHaveBeenCalledTimes(2);
+    expect(loadCases.mock.invocationCallOrder[0]).toBeLessThan(
+      markWorkspaceReady.mock.invocationCallOrder[0],
+    );
     expect(setCases).toHaveBeenCalledWith([expect.objectContaining({ id: "case-1" })]);
     expect(setHasLoadedData).toHaveBeenCalledWith(true);
     expect(setError).toHaveBeenCalledWith(null);
@@ -118,6 +124,7 @@ describe("useConnectionFlow", () => {
     const setCases = vi.fn();
     const setError = vi.fn();
     const setHasLoadedData = vi.fn();
+    const markWorkspaceReady = vi.fn();
     const mockDataManager = {
       migrateWorkspaceToV22,
     } as unknown as DataManager;
@@ -134,6 +141,7 @@ describe("useConnectionFlow", () => {
         setCases,
         setError,
         setHasLoadedData,
+        markWorkspaceReady,
       }),
     );
 
@@ -146,6 +154,7 @@ describe("useConnectionFlow", () => {
     expect(loadCases).not.toHaveBeenCalled();
     expect(setCases).not.toHaveBeenCalled();
     expect(setHasLoadedData).not.toHaveBeenCalled();
+    expect(markWorkspaceReady).not.toHaveBeenCalled();
     expect(setError).toHaveBeenCalledWith(
       "Failed to complete workspace connection: migration exploded",
     );

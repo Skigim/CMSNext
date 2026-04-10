@@ -1,7 +1,10 @@
-import { render, waitFor } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { DataManagerProvider } from "@/contexts/DataManagerContext";
+import {
+  DataManagerProvider,
+  useDataManagerSafe,
+} from "@/contexts/DataManagerContext";
 
 const migrateFinancialsWithoutHistory = vi.fn<() => Promise<number>>();
 
@@ -16,6 +19,7 @@ let mockFileStorageContext = {
   },
   fileStorageService: null,
   isConnected: true,
+  isWorkspaceReady: false,
   status: {
     status: "connected",
     permissionStatus: "granted",
@@ -59,6 +63,7 @@ describe("DataManagerContext", () => {
       },
       fileStorageService: null,
       isConnected: true,
+      isWorkspaceReady: false,
       status: {
         status: "connected",
         permissionStatus: "granted",
@@ -91,6 +96,10 @@ describe("DataManagerContext", () => {
     mockEncryptionContext = {
       ...mockEncryptionContext,
       isStartupUnlockReady: true,
+    };
+    mockFileStorageContext = {
+      ...mockFileStorageContext,
+      isWorkspaceReady: true,
     };
     rerender(
       <DataManagerProvider>
@@ -125,6 +134,10 @@ describe("DataManagerContext", () => {
       fileIsEncrypted: false,
       isStartupUnlockReady: false,
     };
+    mockFileStorageContext = {
+      ...mockFileStorageContext,
+      isWorkspaceReady: true,
+    };
 
     // ACT
     render(
@@ -157,5 +170,49 @@ describe("DataManagerContext", () => {
 
     // ASSERT
     expect(migrateFinancialsWithoutHistory).not.toHaveBeenCalled();
+  });
+
+  it("keeps the safe DataManager unavailable until workspace startup is complete", async () => {
+    // ARRANGE
+    migrateFinancialsWithoutHistory.mockResolvedValue(0);
+    mockEncryptionContext = {
+      ...mockEncryptionContext,
+      isStartupUnlockReady: true,
+    };
+
+    function AvailabilityProbe() {
+      const dataManager = useDataManagerSafe();
+
+      return <div data-testid="availability">{dataManager ? "available" : "unavailable"}</div>;
+    }
+
+    const { rerender } = render(
+      <DataManagerProvider>
+        <AvailabilityProbe />
+      </DataManagerProvider>,
+    );
+
+    // ASSERT
+    expect(screen.getByTestId("availability").textContent).toBe("unavailable");
+    expect(migrateFinancialsWithoutHistory).not.toHaveBeenCalled();
+
+    // ACT
+    mockFileStorageContext = {
+      ...mockFileStorageContext,
+      isWorkspaceReady: true,
+    };
+    rerender(
+      <DataManagerProvider>
+        <AvailabilityProbe />
+      </DataManagerProvider>,
+    );
+
+    // ASSERT
+    await waitFor(() => {
+      expect(screen.getByTestId("availability").textContent).toBe("available");
+    });
+    await waitFor(() => {
+      expect(migrateFinancialsWithoutHistory).toHaveBeenCalledTimes(1);
+    });
   });
 });
