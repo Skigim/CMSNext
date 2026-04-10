@@ -11,7 +11,7 @@
 
 ## ✅ Recent Completed Work (March carryover + April progress)
 
-- [x] Shipped the persisted v2.1 workspace + archive migration path from Settings.
+- [x] Removed runtime workspace + archive migration tooling and made runtime support strict persisted v2.2-only.
 - [x] Wired `FileStorageService`, `DataManager`, and `CaseService` to hydrate normalized people data at runtime.
 - [x] Added `PersonService` plus relationship-aware linked-person handling for normalized cases.
 - [x] Expanded intake/edit workflow coverage for linked-person save payloads and existing-case updates.
@@ -95,7 +95,7 @@ Status on `feat/application-domain-week2a`: the domain/model slice is landed, th
 
 - [x] Update storage interfaces to support persisted and runtime `applications[]`.
 - [x] Add `ApplicationService` for CRUD operations and status-history management.
-- [x] Wire `FileStorageService` and migration paths so v2.1 workspaces can safely load optional `applications[]` support while keeping the persisted v2.1 storage shape.
+- [x] Wire `FileStorageService` and storage helpers so canonical persisted v2.2 workspaces can carry optional `applications[]` support without runtime migration.
 
 #### Refactoring & Polish
 

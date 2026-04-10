@@ -11,7 +11,7 @@ import {
 } from "@/src/test/testUtils";
 import type { ApplicationStatus } from "@/types/application";
 import type { CaseStatus } from "@/types/case";
-import type { NormalizedFileDataV20, PersistedNormalizedFileDataV21 } from "@/utils/storageV21Migration";
+import type { NormalizedFileDataV20, PersistedNormalizedFileDataV21 } from "@/utils/persistedV22Storage";
 import {
   dehydrateNormalizedData,
   hydrateNormalizedData,
@@ -23,10 +23,10 @@ import {
   normalizePersistedApplication,
   persistedCasesContainLegacyApplicationFields,
   syncRuntimeApplications,
-} from "@/utils/storageV21Migration";
+} from "@/utils/persistedV22Storage";
 import { mergeCategoryConfig } from "@/types/categoryConfig";
 
-describe("storageV21Migration", () => {
+describe("persistedV22Storage", () => {
   it("recognizes persisted normalized v2.0 payloads using the shared envelope guard", () => {
     // ARRANGE
     const v20Data: NormalizedFileDataV20 = {

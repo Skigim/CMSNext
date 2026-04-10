@@ -139,7 +139,7 @@ CMSNext/
 │   ├── featureFlags.ts         # Feature flag system
 │   ├── performanceTracker.ts   # Telemetry
 │   ├── services/               # Stateless service classes
-│   │   ├── FileStorageService.ts       # File I/O, canonical v2.1 validation
+│   │   ├── FileStorageService.ts       # File I/O, canonical v2.2 validation
 │   │   ├── CaseService.ts             # Case CRUD
 │   │   ├── FinancialsService.ts       # Financial items CRUD
 │   │   ├── NotesService.ts            # Note management
@@ -261,7 +261,7 @@ const adapter = createLocalStorageAdapter<MyType>(
 
 ## Data Layer
 
-### v2.1 Normalized Format
+### v2.2 Normalized Format
 
 All data is stored in a flat, normalized JSON format. No nested case-level structures.
 
@@ -282,8 +282,8 @@ interface NormalizedFileData {
 ```
 
 - Flat arrays with foreign keys — no nested structures
-- Persisted v2.1 data is hydrated/dehydrated through the storage migration helpers
-- Normal runtime reads accept only canonical persisted v2.1 workspaces; use the explicit migration tooling for v2.0 files, while pre-v2.0 nested formats trigger `LegacyFormatError`
+- Persisted v2.2 data is hydrated/dehydrated through the storage helpers
+- Normal runtime reads accept only canonical persisted v2.2 workspaces and archive files; older schemas trigger `LegacyFormatError` and must be upgraded with a previous CMSNext version
 - Main file: `case-tracker-data.json`
 
 ### Storage Hierarchy (3 tiers)
@@ -305,7 +305,7 @@ FileStorageContext (handles/permissions)
     ↓
 AutosaveFileService (debouncing + write queue)
     ↓
-FileStorageService (read/write + canonical v2.1 validation)
+FileStorageService (read/write + canonical v2.2 validation)
     ↓
 File System Access API (browser native)
 ```

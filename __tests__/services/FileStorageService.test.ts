@@ -19,7 +19,7 @@ import type AutosaveFileService from "@/utils/AutosaveFileService";
 import {
   migrateV20ToV21,
   type PersistedNormalizedFileDataV21,
-} from "@/utils/storageV21Migration";
+} from "@/utils/persistedV22Storage";
 
 describe("FileStorageService v2.2", () => {
   let fileStorage: FileStorageService;
@@ -115,6 +115,9 @@ describe("FileStorageService v2.2", () => {
     // ACT & ASSERT
     const readPromise = fileStorage.readFileData();
     await expect(readPromise).rejects.toThrow(LegacyFormatError);
+    await expect(readPromise).rejects.toThrow(
+      "This workspace is using an outdated schema (v2.1 or older). To load this file, it must be upgraded using a previous version of CMSNext.",
+    );
     expect(mockFileService.writeFile).not.toHaveBeenCalled();
   });
 
@@ -127,6 +130,19 @@ describe("FileStorageService v2.2", () => {
     // ACT & ASSERT
     const readPromise = fileStorage.readFileData();
     await expect(readPromise).rejects.toThrow(LegacyFormatError);
+    expect(mockFileService.writeFile).not.toHaveBeenCalled();
+  });
+
+  it("rejects invalid persisted v2.2 workspaces without offering runtime migration", async () => {
+    // ARRANGE
+    mockFileService.readFile.mockResolvedValue({ version: "2.2", people: [] });
+
+    // ACT & ASSERT
+    const readPromise = fileStorage.readFileData();
+    await expect(readPromise).rejects.toThrow(LegacyFormatError);
+    await expect(readPromise).rejects.toThrow(
+      "This workspace file is not in a valid canonical v2.2 format.",
+    );
     expect(mockFileService.writeFile).not.toHaveBeenCalled();
   });
 

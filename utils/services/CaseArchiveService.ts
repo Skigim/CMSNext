@@ -41,11 +41,11 @@ import AutosaveFileService from "../AutosaveFileService";
 import { safeNotifyFileStorageChange } from "../fileStorageNotify";
 import { createLogger } from "../logger";
 import {
-  buildPersistedArchiveDataV21,
-  hydratePersistedArchiveDataV21,
-  isPersistedCaseArchiveDataV21,
-  migrateArchiveDataToPersistedV21,
-} from "../workspaceV21Migration";
+  buildPersistedArchiveDataV22,
+  hydratePersistedArchiveDataV22,
+  isPersistedCaseArchiveDataV22,
+} from "../persistedV22Storage";
+import { LegacyFormatError } from "./FileStorageService";
 
 const logger = createLogger("CaseArchiveService");
 
@@ -110,11 +110,11 @@ export interface RefreshQueueResult {
  * ## Archive File Format
  * 
  * Archive files are stored as `archived-cases-{year}.json` and are persisted
- * in canonical v2.1 normalized form:
+ * in canonical v2.2 normalized form:
  * 
  * ```typescript
  * {
- *   version: "2.1",
+ *   version: "2.2",
  *   archiveType: "cases",
  *   people: [...],
  *   cases: [...],
@@ -433,7 +433,7 @@ export class CaseArchiveService {
       };
     }
 
-    const normalizedArchive = this.normalizeArchiveData(existingData, archiveFileName);
+    const normalizedArchive = this.normalizeArchiveData(existingData);
     if (!normalizedArchive) {
       throw new Error(
         `Existing archive file could not be normalized due to an unsupported or corrupted format: ${archiveFileName}`,
@@ -505,34 +505,26 @@ export class CaseArchiveService {
    * @returns Archive data or null if not found/invalid
    */
   async loadArchivedCases(fileName: string): Promise<CaseArchiveData | null> {
-    try {
-      const data = await this.fileService.readNamedFile(fileName);
-      if (!data) {
-        logger.debug("Archive file not found", { fileName });
-        return null;
-      }
-
-      const normalizedArchive = this.normalizeArchiveData(data, fileName);
-      if (!normalizedArchive) {
-        logger.warn("Invalid archive file format", { fileName });
-        return null;
-      }
-
-      logger.info("Loaded archive file", {
-        fileName,
-        caseCount: normalizedArchive.cases.length,
-        financialCount: normalizedArchive.financials.length,
-        noteCount: normalizedArchive.notes.length,
-      });
-
-      return normalizedArchive;
-    } catch (error) {
-      logger.error("Failed to load archive file", {
-        fileName,
-        error: error instanceof Error ? error.message : "Unknown error",
-      });
+    const data = await this.fileService.readNamedFile(fileName);
+    if (!data) {
+      logger.debug("Archive file not found", { fileName });
       return null;
     }
+
+    const normalizedArchive = this.normalizeArchiveData(data);
+    if (!normalizedArchive) {
+      logger.warn("Invalid archive file format", { fileName });
+      return null;
+    }
+
+    logger.info("Loaded archive file", {
+      fileName,
+      caseCount: normalizedArchive.cases.length,
+      financialCount: normalizedArchive.financials.length,
+      noteCount: normalizedArchive.notes.length,
+    });
+
+    return normalizedArchive;
   }
 
   // ==========================================================================
@@ -697,18 +689,18 @@ export class CaseArchiveService {
     return getCasesInArchivalQueue(currentData.cases).length;
   }
 
-  private normalizeArchiveData(data: unknown, fileName: string): CaseArchiveData | null {
+  private normalizeArchiveData(data: unknown): CaseArchiveData | null {
     if (isCaseArchiveData(data)) {
       return data;
     }
 
-    if (isPersistedCaseArchiveDataV21(data)) {
-      return hydratePersistedArchiveDataV21(data);
+    if (isPersistedCaseArchiveDataV22(data)) {
+      return hydratePersistedArchiveDataV22(data);
     }
 
-    const migratedArchive = migrateArchiveDataToPersistedV21(data, fileName);
-    if (migratedArchive.data) {
-      return hydratePersistedArchiveDataV21(migratedArchive.data);
+    const candidate = data as Record<string, unknown> | null;
+    if (candidate && typeof candidate.version === "string" && candidate.version !== "2.2") {
+      throw new LegacyFormatError(`${candidate.version} archive format`);
     }
 
     return null;
@@ -718,7 +710,7 @@ export class CaseArchiveService {
     archiveFileName: string,
     archiveData: CaseArchiveData,
   ): Promise<boolean> {
-    const persistedArchive = buildPersistedArchiveDataV21(archiveData);
+    const persistedArchive = buildPersistedArchiveDataV22(archiveData);
     const writeSucceeded = await this.fileService.writeNamedFile(archiveFileName, persistedArchive);
     if (!writeSucceeded) {
       return false;

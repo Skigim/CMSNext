@@ -12,7 +12,7 @@ import {
   type PersistedNormalizedFileDataV21,
   type PersistedNormalizedFileDataV22,
   type RuntimeNormalizedFileDataV22,
-} from '@/utils/storageV21Migration'
+} from '@/utils/persistedV22Storage'
 import type { DailyActivityReport, CaseActivityLogState } from '@/types/activityLog'
 import type { AlertWithMatch } from '@/utils/alertsData'
 import type { AppNavigationConfig } from '@/components/app/AppNavigationShell'

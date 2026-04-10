@@ -23,7 +23,7 @@ import { resolveCaseRecordIntakeCompleted } from '@/domain/cases';
 import { toLocalDateString } from '../../domain/common';
 import { formatCaseDisplayName } from '../../domain/cases/formatting';
 import type { AlertWithMatch } from '@/domain/alerts';
-import { dehydrateStoredCase, hydrateStoredCase, syncRuntimeApplications } from '@/utils/storageV21Migration';
+import { dehydrateStoredCase, hydrateStoredCase, syncRuntimeApplications } from '@/utils/persistedV22Storage';
 
 // formatCaseDisplayName imported from domain layer
 const PRIMARY_CASE_PERSON_ROLE: CasePersonRole = 'applicant';
@@ -243,7 +243,7 @@ export class CaseService {
    * @param {PersistedCase} caseItem - Stored-style case data with people references
    * @param {Person[]} people - Global people registry used to resolve references
    * @returns {StoredCase} Hydrated runtime case data with primary person and linked people
-   * Delegates to the canonical v2.1 storage hydrator so all read boundaries
+  * Delegates to the canonical v2.2 storage hydrator so all read boundaries
    * resolve primary person references consistently.
    *
    * @throws {Error} If no linked people exist or a referenced person cannot be found

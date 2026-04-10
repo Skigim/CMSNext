@@ -37,8 +37,6 @@ export interface FeatureFlags {
 	"cases.bulkActions": boolean;
 	/** Controls visibility of developer tools in Settings. */
 	"settings.devTools": boolean;
-	/** Enables the legacy migration utility in Settings (v1.x and v2.0 inputs end up in v2.1). */
-	"settings.legacyMigration": boolean;
 }
 
 /** All known feature flag keys. */
@@ -61,7 +59,6 @@ const FEATURE_FLAG_DEFAULTS: FeatureFlags = {
 	"alerts.advancedFilters": true,
 	"cases.bulkActions": false,
 	"settings.devTools": APP_CONFIG.devtoolsEnabled,
-	"settings.legacyMigration": APP_CONFIG.devtoolsEnabled,
 };
 
 /** Immutable default feature flag configuration. */

@@ -24,7 +24,7 @@ import {
   isPersistedNormalizedFileDataV22,
   selectDeterministicCanonicalApplication,
   type PersistedNormalizedFileDataV22,
-} from "../storageV21Migration";
+} from "../persistedV22Storage";
 
 const logger = createLogger("FileStorageService");
 const NORMALIZED_VERSION = "2.2";
@@ -188,16 +188,11 @@ export class LegacyFormatError extends Error {
    * @param {string} detectedFormat - The detected legacy format version
    */
   constructor(detectedFormat: string) {
-    const migrationGuidance =
-      detectedFormat === LEGACY_FORMAT_V2_0 ||
-      detectedFormat === LEGACY_FORMAT_V2_1 ||
-      detectedFormat.startsWith(INVALID_V2_2_FORMAT_PREFIX)
-        ? `This workspace must be upgraded to persisted v${NORMALIZED_VERSION} before normal runtime operations continue.`
-        : `Use the available migration tooling or contact support for assistance moving this data to v${NORMALIZED_VERSION}.`;
+    const message = detectedFormat.startsWith(INVALID_V2_2_FORMAT_PREFIX)
+      ? `This workspace file is not in a valid canonical v${NORMALIZED_VERSION} format.`
+      : "This workspace is using an outdated schema (v2.1 or older). To load this file, it must be upgraded using a previous version of CMSNext.";
 
-    super(
-      `This workspace file uses an unsupported format (${detectedFormat}) for normal runtime reads. ${migrationGuidance}`,
-    );
+    super(message);
     this.name = "LegacyFormatError";
   }
 }
@@ -236,8 +231,8 @@ interface FileStorageServiceConfig {
  * ## Core Responsibilities
  * 
  * ### Data Format Management
- * - **Version Control**: Enforces the current v2.1 normalized format
- * - **Format Enforcement**: Rejects v2.0, older legacy files, and invalid v2.1 payloads
+ * - **Version Control**: Enforces the current v2.2 normalized format
+ * - **Format Enforcement**: Rejects outdated schemas and invalid canonical v2.2 payloads
  * - **Format Validation**: Ensures data integrity before writes
  * - **Auto-enrichment**: Discovers statuses and alert types from data
  * 

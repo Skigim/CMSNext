@@ -2,18 +2,13 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import type { StoredCase } from "../types/case";
 import type AutosaveFileService from "../utils/AutosaveFileService";
-import type { FileStorageService } from "@/utils/services/FileStorageService";
-import type { DataManager } from "../utils/DataManager";
 import type { FileStorageLifecycleSelectors } from "../contexts/FileStorageContext";
-import type { WorkspaceMigrationReport } from "@/utils/workspaceV21Migration";
 
 interface UseConnectionFlowParams {
   isSupported: boolean | undefined;
   hasLoadedData: boolean;
   connectionState: FileStorageLifecycleSelectors;
   service: AutosaveFileService | null;
-  fileStorageService: FileStorageService | null;
-  dataManager: DataManager | null;
   loadCases: () => Promise<StoredCase[]>;
   setCases: React.Dispatch<React.SetStateAction<StoredCase[]>>;
   setError: React.Dispatch<React.SetStateAction<string | null>>;
@@ -25,26 +20,6 @@ interface UseConnectionFlowResult {
   showConnectModal: boolean;
   handleConnectionComplete: () => void | Promise<void>;
   dismissConnectModal: () => void;
-  workspaceUpgradeNoticeKind: "migrated" | "current" | null;
-  acknowledgeWorkspaceUpgradeNotice: () => void;
-}
-
-function getWorkspaceUpgradeNoticeKind(
-  migrationReport: WorkspaceMigrationReport | null,
-): "migrated" | "current" | null {
-  if (!migrationReport) {
-    return null;
-  }
-
-  if (migrationReport.files.some((file) => file.disposition === "migrated")) {
-    return "migrated";
-  }
-
-  if (migrationReport.files.some((file) => file.disposition === "already-current")) {
-    return "current";
-  }
-
-  return null;
 }
 
 /**
@@ -109,8 +84,6 @@ export function useConnectionFlow({
   hasLoadedData,
   connectionState,
   service,
-  fileStorageService: _fileStorageService,
-  dataManager,
   loadCases,
   setCases,
   setError,
@@ -118,9 +91,6 @@ export function useConnectionFlow({
   markWorkspaceReady,
 }: UseConnectionFlowParams): UseConnectionFlowResult {
   const [dismissedModalKey, setDismissedModalKey] = useState<string | null>(null);
-  const [workspaceUpgradeNoticeKind, setWorkspaceUpgradeNoticeKind] = useState<
-    "migrated" | "current" | null
-  >(null);
   const lastErrorRef = useRef<number | null>(null);
 
   const {
@@ -175,11 +145,6 @@ export function useConnectionFlow({
   // Called by modal when connection + password is complete
   const handleConnectionComplete = useCallback(async () => {
     try {
-      const migrationReport = dataManager
-        ? await dataManager.migrateWorkspaceToV22()
-        : null;
-      const upgradeNoticeKind = getWorkspaceUpgradeNoticeKind(migrationReport);
-
       // Load cases into app state
       const loadedCases = await loadCases();
       markWorkspaceReady();
@@ -187,7 +152,6 @@ export function useConnectionFlow({
       setHasLoadedData(true);
       setDismissedModalKey(null);
       setError(null);
-      setWorkspaceUpgradeNoticeKind(upgradeNoticeKind);
       
       // Start autosave if not already running
       if (service && !service.getStatus().isRunning) {
@@ -204,7 +168,7 @@ export function useConnectionFlow({
       setError(connectionErrorMessage);
       toast.error(connectionErrorMessage, { id: "connection-error" });
     }
-  }, [dataManager, loadCases, markWorkspaceReady, setCases, setHasLoadedData, setError, service]);
+  }, [loadCases, markWorkspaceReady, setCases, setHasLoadedData, setError, service]);
 
   // Modal visibility and error sync effect
   useEffect(() => {
@@ -256,15 +220,9 @@ export function useConnectionFlow({
     setDismissedModalKey(modalStateKey);
   }, [modalStateKey]);
 
-  const acknowledgeWorkspaceUpgradeNotice = useCallback(() => {
-    setWorkspaceUpgradeNoticeKind(null);
-  }, []);
-
   return {
     showConnectModal,
     handleConnectionComplete,
     dismissConnectModal,
-    workspaceUpgradeNoticeKind,
-    acknowledgeWorkspaceUpgradeNotice,
   };
 }

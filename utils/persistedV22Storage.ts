@@ -1,5 +1,7 @@
 import { v4 as uuidv4 } from "uuid";
 
+import type { CaseArchiveData } from "@/types/archive";
+
 import type {
   AlertRecord,
   CaseRecord,
@@ -24,6 +26,7 @@ import {
 import type { CaseActivityEntry } from "@/types/activityLog";
 import {
   getCompletionStatusNames,
+  mergeCategoryConfig,
   type CategoryConfig,
 } from "@/types/categoryConfig";
 import type { Template } from "@/types/template";
@@ -101,6 +104,25 @@ export interface RuntimeNormalizedFileDataV22 {
   categoryConfig: CategoryConfig;
   activityLog: CaseActivityEntry[];
   templates?: Template[];
+}
+
+export interface PersistedCaseArchiveDataV22 extends PersistedNormalizedFileDataV22 {
+  archiveType: "cases";
+  archiveYear: number;
+  archivedAt: string;
+}
+
+function cloneArchiveCases(cases: CaseArchiveData["cases"]): CaseArchiveData["cases"] {
+  return cases.map((caseItem) => ({
+    ...caseItem,
+    people: caseItem.people?.map((ref) => ({ ...ref })),
+    person: { ...caseItem.person },
+    linkedPeople: caseItem.linkedPeople?.map((linked) => ({
+      ref: { ...linked.ref },
+      person: { ...linked.person },
+    })),
+    caseRecord: { ...caseItem.caseRecord },
+  }));
 }
 
 function cloneApplicationStatusHistory(
@@ -216,6 +238,62 @@ export function isPersistedNormalizedFileDataV22(data: unknown): data is Persist
   );
 }
 
+export function isPersistedCaseArchiveDataV22(data: unknown): data is PersistedCaseArchiveDataV22 {
+  if (!isPersistedNormalizedFileDataV22(data)) {
+    return false;
+  }
+
+  const candidate = data as unknown as Record<string, unknown>;
+  return (
+    candidate.archiveType === "cases" &&
+    typeof candidate.archivedAt === "string" &&
+    typeof candidate.archiveYear === "number"
+  );
+}
+
+export function buildPersistedArchiveDataV22(
+  archiveData: CaseArchiveData,
+): PersistedCaseArchiveDataV22 {
+  const runtimeNormalizedData: RuntimeNormalizedFileDataV22 = {
+    version: "2.2",
+    people: [],
+    cases: cloneArchiveCases(archiveData.cases),
+    applications: [],
+    financials: archiveData.financials.map((financial) => ({ ...financial })),
+    notes: archiveData.notes.map((note) => ({ ...note })),
+    alerts: [],
+    exported_at: archiveData.archivedAt,
+    total_cases: archiveData.cases.length,
+    categoryConfig: mergeCategoryConfig(),
+    activityLog: [],
+  };
+
+  const persistedData = dehydrateNormalizedData(runtimeNormalizedData);
+
+  return {
+    ...persistedData,
+    archiveType: "cases",
+    archiveYear: archiveData.archiveYear,
+    archivedAt: archiveData.archivedAt,
+  };
+}
+
+export function hydratePersistedArchiveDataV22(
+  data: PersistedCaseArchiveDataV22,
+): CaseArchiveData {
+  const hydratedData = hydrateNormalizedData(data);
+
+  return {
+    version: "1.0",
+    archiveType: "cases",
+    archivedAt: data.archivedAt,
+    archiveYear: data.archiveYear,
+    cases: hydratedData.cases,
+    financials: hydratedData.financials,
+    notes: hydratedData.notes,
+  };
+}
+
 function normalizeName(value: string): string {
   return value.trim().replaceAll(/\s+/g, " ").toLowerCase();
 }
@@ -223,7 +301,7 @@ function normalizeName(value: string): string {
 function buildCasePeopleRefs(
   caseItem: Pick<StoredCase, "id" | "people">,
 ): CasePersonRef[] {
-  // Canonical persisted v2.1 data must already carry explicit people[] refs on
+  // Canonical persisted v2.2 data must already carry explicit people[] refs on
   // every runtime case. This helper now enforces that invariant instead of
   // reconstructing refs from other hydrated fields.
   const existingPeople = caseItem.people?.filter((ref) => Boolean(ref.personId)) ?? [];

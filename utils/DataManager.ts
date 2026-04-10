@@ -23,7 +23,7 @@ import type {
   CaseArchiveData,
   RestoreResult,
 } from "../types/archive";
-import { DEFAULT_ARCHIVAL_SETTINGS, parseArchiveYear } from "../types/archive";
+import { DEFAULT_ARCHIVAL_SETTINGS } from "../types/archive";
 import AutosaveFileService from './AutosaveFileService';
 import { createLogger } from './logger';
 import { extractErrorMessage } from './errorUtils';
@@ -60,24 +60,6 @@ import { AlertsService } from "./services/AlertsService";
 import { TemplateService } from "./services/TemplateService";
 import { ApplicationService } from "./services/ApplicationService";
 import { CaseArchiveService, type RefreshQueueResult } from "./services/CaseArchiveService";
-import {
-  MAIN_WORKSPACE_FILE_NAME,
-  buildWorkspaceMigrationReport,
-  createEmptyMigrationCounts,
-  migrateArchiveDataToPersistedV22,
-  summarizeUnknownCounts,
-  validatePersistedV22Data,
-  type WorkspaceMigrationFileReport,
-  type WorkspaceMigrationReport,
-} from "./workspaceV21Migration";
-import { isNormalizedFileData } from "./services/FileStorageService";
-import {
-  hydrateNormalizedData,
-  isPersistedNormalizedFileDataV20,
-  isPersistedNormalizedFileDataV21,
-  migrateV20ToV21,
-  migrateV21ToV22,
-} from "./storageV21Migration";
 
 // ============================================================================
 // Configuration & Logging
@@ -282,14 +264,14 @@ export class DataManager {
   // =============================================================================
 
   /**
-   * Read current data from file system in normalized v2.1 runtime format.
+  * Read current data from file system in normalized v2.2 runtime format.
    * 
    * This is a private helper method that delegates to FileStorageService.
    * Always reads fresh data from disk - no caching.
    * 
    * @private
    * @returns {Promise<NormalizedFileData | null>} The normalized file data, or null if no file exists
-   * @throws {LegacyFormatError} If file is not canonical persisted v2.1 data
+  * @throws {LegacyFormatError} If file is not canonical persisted v2.2 data
    */
   private async readFileData(): Promise<NormalizedFileData | null> {
     return this.fileStorage.readFileData();
@@ -1479,7 +1461,7 @@ export class DataManager {
   /**
    * Write normalized data to file system.
    * 
-   * This method writes data through the canonical v2.1 persistence path after
+  * This method writes data through the canonical v2.2 persistence path after
    * dehydrating runtime-only case fields.
    * 
    * **Warning:** This method bypasses normal service operations and should
@@ -1491,10 +1473,6 @@ export class DataManager {
   async writeNormalizedData(data: NormalizedFileData): Promise<NormalizedFileData> {
     return this.fileStorage.writeNormalizedData(this.dehydrateCaseData(data));
   }
-
-  // =============================================================================
-  // MIGRATION OPERATIONS
-  // =============================================================================
 
   /**
    * Migrate financial items that don't have amount history.
@@ -1512,70 +1490,6 @@ export class DataManager {
    */
   async migrateFinancialsWithoutHistory(): Promise<number> {
     return this.financials.migrateItemsWithoutHistory();
-  }
-
-  /**
-   * Explicitly migrate the current workspace and supported archive files to
-   * persisted v2.1 format and validate the resulting data.
-   */
-  async migrateWorkspaceToV22(): Promise<WorkspaceMigrationReport> {
-    const files: WorkspaceMigrationFileReport[] = [];
-    const disconnectedMainReport: WorkspaceMigrationFileReport = {
-      fileName: MAIN_WORKSPACE_FILE_NAME,
-      fileKind: "workspace",
-      disposition: "failed",
-      sourceVersion: null,
-      counts: createEmptyMigrationCounts(),
-      validationErrors: [],
-      message: "Workspace folder is not connected or permission has not been granted.",
-    };
-    const disconnectedArchiveReport: WorkspaceMigrationFileReport = {
-      fileName: "archived-cases-*.json",
-      fileKind: "archive",
-      disposition: "failed",
-      sourceVersion: null,
-      counts: createEmptyMigrationCounts(),
-      validationErrors: [],
-      message: "Workspace folder is not connected or permission has not been granted.",
-    };
-
-    if (!this.isConnected()) {
-      files.push(disconnectedMainReport);
-      files.push(disconnectedArchiveReport);
-      return buildWorkspaceMigrationReport(files);
-    }
-
-    files.push(await this.migratePrimaryWorkspaceFile());
-
-    let archiveFileNames: string[] = [];
-    try {
-      archiveFileNames = (await this.fileService.listDataFiles()).filter(
-        (fileName) => parseArchiveYear(fileName) !== null,
-      );
-    } catch (error) {
-      files.push({
-        fileName: "archived-cases-*.json",
-        fileKind: "archive",
-        disposition: "failed",
-        sourceVersion: null,
-        counts: createEmptyMigrationCounts(),
-        validationErrors: [],
-        message: extractErrorMessage(error),
-      });
-      return buildWorkspaceMigrationReport(files);
-    }
-
-    archiveFileNames.sort((left, right) => left.localeCompare(right));
-
-    for (const fileName of archiveFileNames) {
-      files.push(await this.migrateArchiveFile(fileName));
-    }
-
-    return buildWorkspaceMigrationReport(files);
-  }
-
-  async migrateWorkspaceToV21(): Promise<WorkspaceMigrationReport> {
-    return this.migrateWorkspaceToV22();
   }
 
   // =============================================================================
@@ -1703,203 +1617,5 @@ export class DataManager {
    */
   async markCasesForArchivalByIds(caseIds: string[]): Promise<{ markedCount: number; markedIds: string[] }> {
     return this.archive.markForArchival(caseIds);
-  }
-
-  private async migratePrimaryWorkspaceFile(): Promise<WorkspaceMigrationFileReport> {
-    try {
-      const rawData = await this.fileStorage.readRawFileData();
-
-      if (!rawData) {
-        return {
-          fileName: MAIN_WORKSPACE_FILE_NAME,
-          fileKind: "workspace",
-          disposition: "skipped",
-          sourceVersion: null,
-          counts: createEmptyMigrationCounts(),
-          validationErrors: [],
-          message: "No workspace data file was found.",
-        };
-      }
-
-      if (isNormalizedFileData(rawData)) {
-        const validation = validatePersistedV22Data(rawData);
-        return {
-          fileName: MAIN_WORKSPACE_FILE_NAME,
-          fileKind: "workspace",
-          disposition: validation.validationErrors.length === 0 ? "already-current" : "failed",
-          sourceVersion: rawData.version,
-          counts: validation.counts,
-          validationErrors: validation.validationErrors,
-          message:
-            validation.validationErrors.length === 0
-              ? "Already persisted as v2.2."
-              : "Persisted v2.2 validation failed.",
-        };
-      }
-
-      if (isPersistedNormalizedFileDataV21(rawData)) {
-        const migratedData = migrateV21ToV22(rawData);
-        const validation = validatePersistedV22Data(migratedData);
-
-        if (validation.validationErrors.length > 0) {
-          return {
-            fileName: MAIN_WORKSPACE_FILE_NAME,
-            fileKind: "workspace",
-            disposition: "failed",
-            sourceVersion: rawData.version,
-            counts: validation.counts,
-            validationErrors: validation.validationErrors,
-            message: "Migration produced integrity errors.",
-          };
-        }
-
-        await this.fileStorage.writeNormalizedData(hydrateNormalizedData(migratedData));
-
-        return {
-          fileName: MAIN_WORKSPACE_FILE_NAME,
-          fileKind: "workspace",
-          disposition: "migrated",
-          sourceVersion: rawData.version,
-          counts: validation.counts,
-          validationErrors: [],
-          message: "Migrated workspace file to persisted v2.2.",
-        };
-      }
-
-      if (isPersistedNormalizedFileDataV20(rawData)) {
-        const migratedData = migrateV21ToV22(migrateV20ToV21(rawData));
-        const validation = validatePersistedV22Data(migratedData);
-
-        if (validation.validationErrors.length > 0) {
-          return {
-            fileName: MAIN_WORKSPACE_FILE_NAME,
-            fileKind: "workspace",
-            disposition: "failed",
-            sourceVersion: rawData.version,
-            counts: validation.counts,
-            validationErrors: validation.validationErrors,
-            message: "Migration produced integrity errors.",
-          };
-        }
-
-        await this.fileStorage.writeNormalizedData(hydrateNormalizedData(migratedData));
-
-        return {
-          fileName: MAIN_WORKSPACE_FILE_NAME,
-          fileKind: "workspace",
-          disposition: "migrated",
-          sourceVersion: rawData.version,
-          counts: validation.counts,
-          validationErrors: [],
-          message: "Migrated workspace file to persisted v2.2.",
-        };
-      }
-
-      const sourceVersion =
-        rawData && typeof rawData === "object" && "version" in rawData && typeof rawData.version === "string"
-          ? rawData.version
-          : null;
-
-      return {
-        fileName: MAIN_WORKSPACE_FILE_NAME,
-        fileKind: "workspace",
-        disposition: "failed",
-        sourceVersion,
-        counts: summarizeUnknownCounts(rawData),
-        validationErrors: [],
-        message: "Unsupported workspace data format.",
-      };
-    } catch (error) {
-      return {
-        fileName: MAIN_WORKSPACE_FILE_NAME,
-        fileKind: "workspace",
-        disposition: "failed",
-        sourceVersion: null,
-        counts: createEmptyMigrationCounts(),
-        validationErrors: [],
-        message: extractErrorMessage(error),
-      };
-    }
-  }
-
-  private async migrateArchiveFile(fileName: string): Promise<WorkspaceMigrationFileReport> {
-    try {
-      const rawData = await this.fileService.readNamedFile(fileName);
-
-      if (!rawData) {
-        return {
-          fileName,
-          fileKind: "archive",
-          disposition: "skipped",
-          sourceVersion: null,
-          counts: createEmptyMigrationCounts(),
-          validationErrors: [],
-          message: "Archive file could not be read.",
-        };
-      }
-
-      const migratedArchive = migrateArchiveDataToPersistedV22(rawData, fileName);
-      if (!migratedArchive.data) {
-        return {
-          fileName,
-          fileKind: "archive",
-          disposition: "failed",
-          sourceVersion: migratedArchive.sourceVersion,
-          counts: summarizeUnknownCounts(rawData),
-          validationErrors: migratedArchive.error ? [migratedArchive.error] : [],
-          message: migratedArchive.error ?? "Unsupported archive data format.",
-        };
-      }
-
-      const validation = validatePersistedV22Data(migratedArchive.data);
-      if (validation.validationErrors.length > 0) {
-        return {
-          fileName,
-          fileKind: "archive",
-          disposition: "failed",
-          sourceVersion: migratedArchive.sourceVersion,
-          counts: validation.counts,
-          validationErrors: validation.validationErrors,
-          message: "Archive validation failed after migration.",
-        };
-      }
-
-      if (migratedArchive.needsWrite) {
-        const writeSucceeded = await this.fileService.writeNamedFile(fileName, migratedArchive.data);
-        if (!writeSucceeded) {
-          return {
-            fileName,
-            fileKind: "archive",
-            disposition: "failed",
-            sourceVersion: migratedArchive.sourceVersion,
-            counts: validation.counts,
-            validationErrors: [],
-            message: "Archive write returned false.",
-          };
-        }
-      }
-
-      return {
-        fileName,
-        fileKind: "archive",
-        disposition: migratedArchive.needsWrite ? "migrated" : "already-current",
-        sourceVersion: migratedArchive.sourceVersion,
-        counts: validation.counts,
-        validationErrors: [],
-        message: migratedArchive.needsWrite
-          ? "Migrated archive file to persisted v2.2."
-          : "Already persisted as v2.2.",
-      };
-    } catch (error) {
-      return {
-        fileName,
-        fileKind: "archive",
-        disposition: "failed",
-        sourceVersion: null,
-        counts: createEmptyMigrationCounts(),
-        validationErrors: [],
-        message: extractErrorMessage(error),
-      };
-    }
   }
 }

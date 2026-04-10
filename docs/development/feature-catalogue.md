@@ -18,22 +18,22 @@
 
 ## Quick Reference (April 2026)
 
-| Feature               | Rating | Trend | Notes                                                                                                                                                          |
-| --------------------- | ------ | ----- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Case Management       | 95     | ↑     | Canonical intake ownership is shipped with deterministic application selection and locked non-intake edits; status-history UI and compatibility cleanup remain |
-| Financial Operations  | 92     | →     | Mature CRUD/history flows; month-view follow-through remains                                                                                                   |
-| Template System       | 93     | ↑     | Unified templates now cover VR, footer, summary, and narrative flows                                                                                           |
-| Local-First Storage   | 91     | ↑     | Persisted v2.1 workspace/archive migration path shipped                                                                                                        |
-| Developer Enablement  | 90     | ↑     | 1626 passing tests, instruction refresh, keyboard shortcuts shipped, canonical application coverage expanded                                                   |
-| Dashboard & Insights  | 88     | →     | Priority scoring solid; widget personalization still open                                                                                                      |
-| Premium UI/UX         | 88     | ↑     | Keyboard shortcut customization shipped; accessibility audit still pending                                                                                     |
-| Notes & Collaboration | 84     | →     | Stable note/case summary workflows, no cross-case search yet                                                                                                   |
-| Case Archival         | 89     | ↑     | Archive migration path now aligned with persisted v2.1 workspaces                                                                                              |
-| Data Portability      | 86     | ↑     | Explicit upgrade tooling now covers active workspace and archive files                                                                                         |
-| Configurable Statuses | 78     | →     | Stable and integrated into dashboard metrics                                                                                                                   |
-| Legacy Migration      | 84     | ↑     | v2.0-to-v2.1 upgrade tooling shipped through Settings                                                                                                          |
-| Autosave & Recovery   | 75     | →     | Reliable debounce/retry flow; richer visibility still open                                                                                                     |
-| Feature Flags         | 72     | →     | Infrastructure intact; still mostly in-memory/dev-facing                                                                                                       |
+| Feature                | Rating | Trend | Notes                                                                                                                                                          |
+| ---------------------- | ------ | ----- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Case Management        | 95     | ↑     | Canonical intake ownership is shipped with deterministic application selection and locked non-intake edits; status-history UI and compatibility cleanup remain |
+| Financial Operations   | 92     | →     | Mature CRUD/history flows; month-view follow-through remains                                                                                                   |
+| Template System        | 93     | ↑     | Unified templates now cover VR, footer, summary, and narrative flows                                                                                           |
+| Local-First Storage    | 91     | ↑     | Runtime support is now strict canonical persisted v2.2 for workspaces and archives                                                                             |
+| Developer Enablement   | 90     | ↑     | 1626 passing tests, instruction refresh, keyboard shortcuts shipped, canonical application coverage expanded                                                   |
+| Dashboard & Insights   | 88     | →     | Priority scoring solid; widget personalization still open                                                                                                      |
+| Premium UI/UX          | 88     | ↑     | Keyboard shortcut customization shipped; accessibility audit still pending                                                                                     |
+| Notes & Collaboration  | 84     | →     | Stable note/case summary workflows, no cross-case search yet                                                                                                   |
+| Case Archival          | 89     | ↑     | Archive reads and writes are now strict canonical persisted v2.2                                                                                               |
+| Data Portability       | 86     | ↑     | Import/export flows remain stable; runtime no longer upgrades outdated workspace or archive files                                                              |
+| Configurable Statuses  | 78     | →     | Stable and integrated into dashboard metrics                                                                                                                   |
+| Runtime Format Support | 84     | →     | Runtime accepts only canonical persisted v2.2; older schemas are rejected as unsupported input                                                                 |
+| Autosave & Recovery    | 75     | →     | Reliable debounce/retry flow; richer visibility still open                                                                                                     |
+| Feature Flags          | 72     | →     | Infrastructure intact; still mostly in-memory/dev-facing                                                                                                       |
 
 **Average Rating:** 86.8/100  
 **Test Status:** 1626 tests passing
@@ -75,7 +75,7 @@
 
 **Rating: 91/100** _(Updated March 30, 2026)_
 
-File System Access integration is production-ready with AES-256-GCM encryption, context-managed lifecycle (`FileStorageContext`), autosave-backed persistence, and timestamped backups. March 2026 completed the persisted v2.1 workspace and archive migration path, so the storage layer now has an explicit upgrade flow for normalized data instead of relying on legacy runtime coercion.
+File System Access integration is production-ready with AES-256-GCM encryption, context-managed lifecycle (`FileStorageContext`), autosave-backed persistence, and timestamped backups. Runtime storage now accepts only canonical persisted v2.2 workspace and archive files, keeping normalized reads simple and deterministic.
 
 ### Strengths
 
@@ -88,7 +88,7 @@ File System Access integration is production-ready with AES-256-GCM encryption, 
 - Directory reconnect via IndexedDB remembers previous handles across sessions
 - `checkFileEncryptionStatus()` detects encrypted files without requiring password first
 - Automatic backup strategy safeguards against data loss before imports or destructive saves
-- **Persisted v2.1 upgrade tooling** migrates active workspaces and archives through Settings before normal runtime use
+- **Strict persisted v2.2 runtime support** keeps workspace and archive reads deterministic and rejects outdated schemas instead of upgrading them in-app
 - Comprehensive documentation in `DeploymentGuide.md`, `file-storage-toast-catalogue.md`, and `error-boundary-guide.md`
 
 ### Gaps / Risks
@@ -539,15 +539,15 @@ Dashboard framework maintained by insights platform team. Widget development fol
 
 **Rating: 86/100** _(Updated March 30, 2026)_
 
-JSON import/export flows are stable with schema validation, autosave-aware backups, and explicit migration helpers. March 2026 added a persisted v2.1 upgrade path for active workspaces and archive files through Settings, moving normalization out of implicit runtime fallback and into a user-visible, auditable workflow.
+JSON import/export flows are stable with schema validation and autosave-aware backups. Runtime support now treats workspace and archive schemas as strict canonical persisted v2.2 input, so outdated files must be upgraded outside the current app version.
 
 ### Strengths
 
 - **AVS Duplicate Detection**: Matches existing items by accountNumber + description, updates instead of creating duplicates
 - **AVS Preview Checkboxes**: Select/deselect individual accounts before import with New/Update badges
 - **Smart Alert Import**: Unmatched alerts with MCNs automatically create skeleton cases with properly-cased names (handles ALL CAPS, Mc/Mac/O' prefixes)
-- **Workspace + Archive Upgrade Tooling**: Explicit Settings-driven migration upgrades persisted data to canonical v2.1 for both live and archived workspaces
 - Import process validates structure, migrates legacy payloads, and records failures with descriptive toasts
+- Import process validates structure, records failures with descriptive toasts, and leaves outdated runtime files untouched instead of upgrading them in-app
 - Automatic backups (`case-tracker-data.backup-[timestamp].json`) protect against destructive imports
 - Exported data includes metadata (exported_at, totals) ensuring compatibility across environments
 - `JsonUploader` component provides guided UX with progress feedback
@@ -755,11 +755,10 @@ Feature flag infrastructure lives in `utils/featureFlags.ts` with immutable defa
 
 **Actually used flags:**
 
-| Flag                       | Default | Where Used                     | Purpose                              |
-| -------------------------- | ------- | ------------------------------ | ------------------------------------ |
-| `settings.devTools`        | `DEV`   | `Settings.tsx`, `CaseList.tsx` | Show dev tools, sample data button   |
-| `settings.legacyMigration` | `DEV`   | `Settings.tsx`                 | Show v1→v2 migration panel           |
-| `ENABLE_SAMPLE_ALERTS`     | `false` | `useAlertsFlow.ts`             | Sample alerts (disabled permanently) |
+| Flag                   | Default | Where Used                     | Purpose                              |
+| ---------------------- | ------- | ------------------------------ | ------------------------------------ |
+| `settings.devTools`    | `DEV`   | `Settings.tsx`, `CaseList.tsx` | Show dev tools, sample data button   |
+| `ENABLE_SAMPLE_ALERTS` | `false` | `useAlertsFlow.ts`             | Sample alerts (disabled permanently) |
 
 **Placeholder flags (infrastructure ready, not wired up):**
 
@@ -793,51 +792,37 @@ Feature flag infrastructure lives in `utils/featureFlags.ts` with immutable defa
 
 ---
 
-## Legacy Data Migration
+## Runtime Format Support
 
 ### Implementation Snapshot
 
-**Rating: 84/100** _(Updated March 30, 2026)_
+**Rating: 84/100** _(Updated April 10, 2026)_
 
-A dedicated migration toolchain now covers both older legacy formats and the mainstream March 2026 v2.0-to-v2.1 upgrade path. The practical center of gravity has shifted from dev-only migration utilities toward explicit Settings-driven upgrades for active workspaces and archive files before canonical runtime reads.
+The current runtime is intentionally narrow: CMSNext accepts only canonical persisted v2.2 workspace and archive files during normal operation. Older schemas are surfaced as unsupported input instead of being upgraded from within the app.
 
 ### Strengths
 
-- **Comprehensive Transformation**: Migrates nested v1.x format (cases with embedded financials/notes) to the flat v2.1 relational format with a global `people` registry
-- **Safe Migration Flow**: Preview before apply, with detailed statistics on what will be migrated
-- **Persisted Upgrade Path**: Active workspaces and archive files can be upgraded to canonical v2.1 from Settings instead of relying on runtime compatibility shims
-- **Category Discovery**: Auto-discovers statuses and alert types from legacy data and merges with existing config
-- **User-Friendly UI**: `LegacyMigrationPanel` component provides guided migration with progress feedback
-- **Feature-Gated**: Only visible in dev mode via `settings.legacyMigration` flag
-- **Validation**: Rejects already-normalized data with clear error messaging
-- **Activity Logging**: Records migration events for audit trails
+- **Deterministic Runtime Contract**: Workspace and archive reads accept only canonical persisted v2.2 payloads
+- **Clear Unsupported-Input Errors**: Outdated schemas are surfaced distinctly from corrupt or invalid v2.2 payloads
+- **Dormant Future Schema Boundary**: Internal schema-runner scaffolding remains available for later explicit version-to-version transforms without being wired into runtime or Settings
 
-### Components
+### Runtime Behavior
 
-| Component              | Lines | Description                                      |
-| ---------------------- | ----- | ------------------------------------------------ |
-| `legacyMigration.ts`   | 464   | Core transformation logic                        |
-| `LegacyMigrationPanel` | 325   | React UI for triggering and previewing migration |
-
-### Migration Flow
-
-1. **Read Raw File**: Uses `readRawFileData()` to bypass canonical v2.1 validation
-2. **Detect Format**: Identifies legacy v1.x format vs already-normalized data
-3. **Preview Statistics**: Shows case/financial/note/alert counts before migration
-4. **Apply Migration**: Transforms data and writes to file storage
-5. **Notify Success**: Toast feedback and activity log entry
+1. **Read canonical workspace**: Uses the persisted v2.2 storage helpers and rejects outdated schemas.
+2. **Read canonical archives**: Archive services accept only persisted v2.2 archive files during normal operation.
+3. **Surface unsupported input**: Outdated schemas raise `LegacyFormatError` without attempting repair or conversion.
+4. **Reserve future transforms**: Any later schema evolution work must be explicit and internal-only.
 
 ### Gaps / Risks
 
-- Migration is one-way; no rollback mechanism built-in (though backups are created)
-- Large datasets (1000+ cases) may have performance considerations
+- Users must retain access to an older CMSNext version if they still need to upgrade outdated files
+- Large datasets (1000+ cases) may still have performance considerations
 - Limited testing with very large real-world legacy files (mostly synthetic test data)
 
 ### Expansion Opportunities
 
-- Add explicit backup creation before migration
-- Support batch migration for multiple files
-- Provide detailed migration report with any skipped/failed items
+- Keep future schema transforms isolated under internal-only boundaries
+- Improve operator guidance around upgrading outdated files with a previous CMSNext version
 - Add dry-run mode that shows exact changes without applying
 
 ### Coverage & Telemetry

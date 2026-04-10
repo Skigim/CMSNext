@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createMockPerson, createMockStoredCase } from "@/src/test/testUtils";
+import { mergeCategoryConfig } from "@/types/categoryConfig";
+import { dehydrateNormalizedData } from "@/utils/persistedV22Storage";
 import { CaseArchiveService } from "@/utils/services/CaseArchiveService";
 
 const mockSafeNotifyFileStorageChange = vi.hoisted(() => vi.fn());
@@ -31,17 +33,26 @@ function createArchivableCase(id: string) {
   });
 }
 
-function createLegacyArchiveData() {
+function createPersistedArchiveDataV22() {
   const archivedCase = createArchivableCase("existing");
 
   return {
-    version: "1.0" as const,
+    ...dehydrateNormalizedData({
+      version: "2.2" as const,
+      people: [archivedCase.person],
+      cases: [archivedCase],
+      applications: [],
+      financials: [],
+      notes: [],
+      alerts: [],
+      exported_at: "2026-03-01T00:00:00.000Z",
+      total_cases: 1,
+      categoryConfig: mergeCategoryConfig(),
+      activityLog: [],
+    }),
     archiveType: "cases" as const,
     archivedAt: "2026-03-01T00:00:00.000Z",
     archiveYear: 2026,
-    cases: [archivedCase],
-    financials: [],
-    notes: [],
   };
 }
 
@@ -82,7 +93,7 @@ describe("CaseArchiveService.archiveCases", () => {
   it("restores the exact previously-read archive payload on rollback", async () => {
     // ARRANGE
     const caseToArchive = createArchivableCase("new");
-    const legacyArchiveData = createLegacyArchiveData();
+    const persistedArchiveData = createPersistedArchiveDataV22();
 
     fileStorage.readFileData.mockResolvedValue({
       version: "2.1",
@@ -97,7 +108,7 @@ describe("CaseArchiveService.archiveCases", () => {
       activityLog: [],
     });
     fileStorage.writeNormalizedData.mockRejectedValue(new Error("main write failed"));
-    fileService.readNamedFile.mockResolvedValue(legacyArchiveData);
+    fileService.readNamedFile.mockResolvedValue(persistedArchiveData);
     fileService.writeNamedFile.mockResolvedValue(true);
 
     // ACT & ASSERT
@@ -108,17 +119,17 @@ describe("CaseArchiveService.archiveCases", () => {
       1,
       "archived-cases-2026.json",
       expect.objectContaining({
-        version: "2.1",
+        version: "2.2",
         archiveType: "cases",
       }),
     );
     expect(fileService.writeNamedFile).toHaveBeenNthCalledWith(
       2,
       "archived-cases-2026.json",
-      legacyArchiveData,
+      persistedArchiveData,
     );
     expect(fileService.writeNamedFile.mock.calls[0][1]).toMatchObject({
-      version: "2.1",
+      version: "2.2",
       archiveType: "cases",
     });
   });
@@ -175,7 +186,7 @@ describe("CaseArchiveService.archiveCases", () => {
 
     // ACT & ASSERT
     await expect(service.archiveCases(["new"])).rejects.toThrow(
-      "Existing archive file could not be normalized due to an unsupported or corrupted format: archived-cases-2026.json",
+      "This workspace is using an outdated schema (v2.1 or older). To load this file, it must be upgraded using a previous version of CMSNext.",
     );
     expect(fileService.writeNamedFile).not.toHaveBeenCalled();
     expect(fileStorage.writeNormalizedData).not.toHaveBeenCalled();

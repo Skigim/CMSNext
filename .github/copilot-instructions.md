@@ -151,10 +151,10 @@ The application follows a layered, local-first architecture designed to keep bus
 - **Notifications:** After successful writes, call the appropriate `safeNotifyFileStorageChange()` helper to inform the rest of the app about data changes.
 - **Assumptions:** There is no backend, no remote sync, and no auth layer. Access is permission-based and local-first.
 
-### Data Format (v2.1 Normalized)
+### Data Format (v2.2 Normalized)
 
 - The current file format is a **flat, normalized** structure:
-  - `version: "2.1"`
+  - `version: "2.2"`
   - `people: Person[]`
   - `cases: StoredCase[]`
   - `financials: Financial[]` (FK: `caseId`)
@@ -166,8 +166,8 @@ The application follows a layered, local-first architecture designed to keep bus
   - `activityLog: ActivityLogEntry[]`
   - `templates?: Template[]`
 - Avoid introducing nested or denormalized structures; new fields should extend existing records, not embed cross-cutting data.
-- Persisted v2.1 data is hydrated/dehydrated through the existing storage migration helpers.
-- Legacy v2.0 data must be upgraded through the explicit migration tooling before normal runtime reads; older nested formats remain legacy/unsupported unless an explicit migration helper applies.
+- Persisted v2.2 data is hydrated/dehydrated through the existing storage helpers.
+- Legacy v2.1, v2.0, and older nested data must be upgraded outside the current runtime before normal reads; runtime paths now treat them as unsupported input.
 
 ### UI, Themes, and Color System
 

@@ -50,7 +50,7 @@ You are the CMSNext storage specialist. Your job is to preserve the app's local-
 
 1. Trace the storage flow from UI intent to `DataManager`, services, autosave, and the File System Access API.
 2. Check for violations around direct file writes, missing permission checks, stale cached data, or unsupported-browser behavior.
-3. Keep persisted data in canonical v2.1 normalized form and route upgrades through explicit migration paths.
+3. Keep persisted data in canonical v2.2 normalized form and treat older schemas as unsupported runtime input.
 4. Verify debounce behavior, error handling, and file storage notifications after changes.
 5. Run targeted tests and validation commands before concluding the work.
 

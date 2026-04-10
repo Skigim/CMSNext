@@ -1,6 +1,6 @@
 import AutosaveFileService from './AutosaveFileService';
 import { mergeCategoryConfig } from '@/types/categoryConfig';
-import type { PersistedNormalizedFileDataV21 } from '@/utils/storageV21Migration';
+import type { PersistedNormalizedFileDataV22 } from '@/utils/persistedV22Storage';
 
 /**
  * MockFileService — E2E Testing Mock for AutosaveFileService
@@ -26,11 +26,12 @@ interface MockStatus {
   lastDataChange: number | null;
 }
 
-function createMockWorkspaceData(): PersistedNormalizedFileDataV21 {
+function createMockWorkspaceData(): PersistedNormalizedFileDataV22 {
   return {
-    version: '2.1',
+    version: '2.2',
     people: [],
     cases: [],
+    applications: [],
     financials: [],
     notes: [],
     alerts: [],

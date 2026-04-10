@@ -7,7 +7,7 @@ import { ActivityLogService } from './ActivityLogService';
 import { formatCaseDisplayName } from '../../domain/cases/formatting';
 import { createLogger } from '../logger';
 import { resolveNoteCategories } from '../noteCategories';
-import { syncRuntimeApplications } from '@/utils/storageV21Migration';
+import { syncRuntimeApplications } from '@/utils/persistedV22Storage';
 import type { AlertWithMatch } from '@/domain/alerts';
 
 const logger = createLogger('CaseBulkOperationsService');

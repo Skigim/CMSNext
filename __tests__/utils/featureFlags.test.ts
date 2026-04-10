@@ -63,4 +63,12 @@ describe('featureFlags', () => {
     expect(enabled).not.toContain('dashboard.widgets.avgAlertAge');
     expect(enabled).toContain('cases.bulkActions');
   });
+
+  it('does not expose a settings.legacyMigration flag', () => {
+    // ARRANGE
+    const flags = createFeatureFlagContext();
+
+    // ACT & ASSERT
+    expect(flags).not.toHaveProperty('settings.legacyMigration');
+  });
 });

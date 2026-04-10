@@ -5,7 +5,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { CaseArchiveService } from "@/utils/services/CaseArchiveService";
 import { createMockPerson, createMockStoredCase } from "@/src/test/testUtils";
-import { buildPersistedArchiveDataV21 } from "@/utils/workspaceV21Migration";
+import { mergeCategoryConfig } from "@/types/categoryConfig";
+import { dehydrateNormalizedData } from "@/utils/persistedV22Storage";
+import { LegacyFormatError } from "@/utils/services/FileStorageService";
 import type { StoredCase } from "@/types/case";
 
 function createStoredCase(id: string, status: StoredCase["status"] = "Archived") {
@@ -81,6 +83,29 @@ function createArchiveData() {
   };
 }
 
+function createPersistedArchiveDataV22() {
+  const archiveData = createArchiveData();
+
+  return {
+    ...dehydrateNormalizedData({
+      version: "2.2" as const,
+      people: archiveData.cases.map((caseItem) => caseItem.person),
+      cases: archiveData.cases,
+      applications: [],
+      financials: archiveData.financials,
+      notes: archiveData.notes,
+      alerts: [],
+      exported_at: archiveData.archivedAt,
+      total_cases: archiveData.cases.length,
+      categoryConfig: mergeCategoryConfig(),
+      activityLog: [],
+    }),
+    archiveType: "cases" as const,
+    archivedAt: archiveData.archivedAt,
+    archiveYear: archiveData.archiveYear,
+  };
+}
+
 describe("CaseArchiveService.restoreCases", () => {
   let fileStorage: {
     readFileData: ReturnType<typeof vi.fn>;
@@ -109,7 +134,7 @@ describe("CaseArchiveService.restoreCases", () => {
     };
 
     fileService = {
-      readNamedFile: vi.fn().mockResolvedValue(createArchiveData()),
+      readNamedFile: vi.fn().mockResolvedValue(createPersistedArchiveDataV22()),
       writeNamedFile: vi.fn().mockResolvedValue(true),
       listDataFiles: vi.fn().mockResolvedValue([]),
     };
@@ -135,32 +160,24 @@ describe("CaseArchiveService.restoreCases", () => {
     expect(writtenMain.notes.map((n: { id: string }) => n.id)).toEqual(["n1"]);
 
     expect(fileService.writeNamedFile).toHaveBeenCalledTimes(1);
-    expect(fileService.writeNamedFile).toHaveBeenCalledWith(
-      "archived-cases-2025.json",
-      expect.objectContaining({
-        version: "2.1",
-        archiveType: "cases",
-        people: [expect.objectContaining({ id: "person-c2" })],
-        cases: [expect.objectContaining({ id: "c2" })],
-      })
-    );
+    const writtenArchive = fileService.writeNamedFile.mock.calls[0][1];
+    expect(writtenArchive).toMatchObject({
+      version: "2.2",
+      archiveType: "cases",
+      people: [expect.objectContaining({ id: "person-c2" })],
+      cases: [expect.objectContaining({ id: "c2" })],
+    });
   });
 
-  it("restores cases from a persisted v2.1 archive file", async () => {
+  it("rejects persisted v2.1 archive payloads instead of upgrading them", async () => {
     // ARRANGE
-    fileService.readNamedFile.mockResolvedValue(buildPersistedArchiveDataV21(createArchiveData()));
+    fileService.readNamedFile.mockResolvedValue({ version: "2.1", archiveType: "cases" });
 
-    // ACT
-    const result = await service.restoreCases("archived-cases-2025.json", ["c1"]);
-
-    // ASSERT
-    expect(result).toMatchObject({
-      restoredCount: 1,
-      financialsRestored: 1,
-      notesRestored: 1,
-      restoredCaseIds: ["c1"],
-    });
-    expect(fileStorage.writeNormalizedData).toHaveBeenCalledTimes(1);
+    // ACT & ASSERT
+    await expect(service.restoreCases("archived-cases-2025.json", ["c1"])).rejects.toThrow(
+      LegacyFormatError,
+    );
+    expect(fileStorage.writeNormalizedData).not.toHaveBeenCalled();
   });
 
   it("returns empty result and performs no I/O for empty case IDs", async () => {
