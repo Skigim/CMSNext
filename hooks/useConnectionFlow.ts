@@ -88,7 +88,7 @@ export function useConnectionFlow({
   connectionState,
   service,
   fileStorageService: _fileStorageService,
-  dataManager: _dataManager,
+  dataManager,
   loadCases,
   setCases,
   setError,
@@ -96,6 +96,7 @@ export function useConnectionFlow({
 }: UseConnectionFlowParams): UseConnectionFlowResult {
   const [dismissedModalKey, setDismissedModalKey] = useState<string | null>(null);
   const lastErrorRef = useRef<number | null>(null);
+  const hasShownWorkspaceUpgradeNoticeRef = useRef(false);
 
   const {
     lifecycle,
@@ -149,6 +150,18 @@ export function useConnectionFlow({
   // Called by modal when connection + password is complete
   const handleConnectionComplete = useCallback(async () => {
     try {
+      const migrationReport = dataManager
+        ? await dataManager.migrateWorkspaceToV22()
+        : null;
+
+      if (migrationReport?.summary.migrated && !hasShownWorkspaceUpgradeNoticeRef.current) {
+        hasShownWorkspaceUpgradeNoticeRef.current = true;
+        toast.info("Workspace upgraded to v2.2", {
+          id: "workspace-upgraded",
+          description: "Your saved data was upgraded to the new canonical workspace format.",
+        });
+      }
+
       // Load cases into app state
       const loadedCases = await loadCases();
       setCases(loadedCases);
@@ -167,10 +180,11 @@ export function useConnectionFlow({
       toast.success(msg, { id: "connection-success" });
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unknown error";
-      setError(`Failed to load cases: ${message}`);
-      toast.error(`Failed to load cases: ${message}`, { id: "connection-error" });
+      const connectionErrorMessage = `Failed to complete workspace connection: ${message}`;
+      setError(connectionErrorMessage);
+      toast.error(connectionErrorMessage, { id: "connection-error" });
     }
-  }, [loadCases, setCases, setHasLoadedData, setError, service]);
+  }, [dataManager, loadCases, setCases, setHasLoadedData, setError, service]);
 
   // Modal visibility and error sync effect
   useEffect(() => {

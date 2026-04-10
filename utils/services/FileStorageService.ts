@@ -21,17 +21,16 @@ import {
   dehydrateNormalizedData,
   hydrateNormalizedData,
   hydrateStoredCase,
-  isPersistedNormalizedFileDataV21,
-  persistedCasesContainLegacyApplicationFields,
+  isPersistedNormalizedFileDataV22,
   selectDeterministicCanonicalApplication,
-  syncRuntimeApplications,
-  type PersistedNormalizedFileDataV21,
+  type PersistedNormalizedFileDataV22,
 } from "../storageV21Migration";
 
 const logger = createLogger("FileStorageService");
-const NORMALIZED_VERSION = "2.1";
+const NORMALIZED_VERSION = "2.2";
 const LEGACY_FORMAT_V2_0 = "v2.0";
-const INVALID_V2_1_FORMAT_PREFIX = "invalid v2.1 workspace";
+const LEGACY_FORMAT_V2_1 = "v2.1";
+const INVALID_V2_2_FORMAT_PREFIX = "invalid v2.2 workspace";
 
 /**
  * Deep-copy a single activity log entry, ensuring payload objects are new references.
@@ -77,7 +76,7 @@ export type {
 } from "../../types/case";
 
 /**
- * Normalized file data format (v2.1 runtime shape).
+ * Normalized file data format (current runtime shape).
  *
  * This is the current runtime-ready data format used for file operations.
  * It uses a normalized structure with flat arrays and foreign key references
@@ -86,8 +85,8 @@ export type {
  * @interface NormalizedFileData
  */
 export interface NormalizedFileData {
-  /** Data format version (always "2.1") */
-  version: "2.1";
+  /** Data format version (current canonical writes persist as "2.2") */
+  version: "2.2";
   /** Global people registry available to services and future UI flows */
   people: Person[];
   /** Runtime-hydrated cases */
@@ -118,7 +117,7 @@ export interface CaseDehydratedNormalizedFileData extends Omit<NormalizedFileDat
 
 type NormalizedWriteData =
   | NormalizedFileData
-  | PersistedNormalizedFileDataV21
+  | PersistedNormalizedFileDataV22
   | CaseDehydratedNormalizedFileData;
 
 function cloneApplicationForWrite(application: Application): Application {
@@ -161,23 +160,23 @@ function isCaseDehydratedNormalizedWriteData(
 }
 
 /**
- * Type guard to check if data matches the persisted normalized v2.1 format.
+ * Type guard to check if data matches the persisted normalized v2.2 format.
  * 
  * @param {unknown} data - Data to check
  * @returns {boolean} true if data is NormalizedFileData
  */
-export function isNormalizedFileData(data: unknown): data is PersistedNormalizedFileDataV21 {
-  return isPersistedNormalizedFileDataV21(data);
+export function isNormalizedFileData(data: unknown): data is PersistedNormalizedFileDataV22 {
+  return isPersistedNormalizedFileDataV22(data);
 }
 
 /**
  * Error thrown when attempting to load a workspace file outside the canonical
- * persisted v2.1 format accepted by the normal app runtime.
+ * persisted v2.2 format accepted by the normal app runtime.
  * 
  * This error is thrown when the file format is detected as legacy, v2.0, or an
- * invalid/non-canonical v2.1 payload. It provides a user-facing message that
- * points users toward the explicit migration tooling instead of silently
- * rewriting the workspace during normal reads.
+ * invalid/non-canonical v2.2 payload. It provides a user-facing message that
+ * points users toward the current upgrade flow instead of silently rewriting
+ * the workspace during normal reads.
  * 
  * @class LegacyFormatError
  * @extends Error
@@ -191,8 +190,9 @@ export class LegacyFormatError extends Error {
   constructor(detectedFormat: string) {
     const migrationGuidance =
       detectedFormat === LEGACY_FORMAT_V2_0 ||
-      detectedFormat.startsWith(INVALID_V2_1_FORMAT_PREFIX)
-        ? `Use the persisted v${NORMALIZED_VERSION} migration tool in Settings → Diagnostics, then reopen the workspace.`
+      detectedFormat === LEGACY_FORMAT_V2_1 ||
+      detectedFormat.startsWith(INVALID_V2_2_FORMAT_PREFIX)
+        ? `This workspace must be upgraded to persisted v${NORMALIZED_VERSION} before normal runtime operations continue.`
         : `Use the available migration tooling or contact support for assistance moving this data to v${NORMALIZED_VERSION}.`;
 
     super(
@@ -321,22 +321,22 @@ export class FileStorageService {
   }
 
   /**
- * Read current data from file system in canonical normalized v2.1 runtime format.
+ * Read current data from file system in canonical normalized v2.2 runtime format.
  *
    * This is the primary read method that:
    * 1. Reads file via AutosaveFileService
    * 2. Validates format version
- * 3. Hydrates persisted v2.1 data for runtime consumers
-  * 4. Rejects v2.0/legacy/non-canonical payloads with LegacyFormatError
-  * 5. Keeps manual migration tooling on the explicit migration path only
+ * 3. Hydrates persisted v2.2 data for runtime consumers
+  * 4. Rejects v2.1/v2.0/legacy/non-canonical payloads with LegacyFormatError
+  * 5. Keeps upgrade tooling on the explicit migration path only
  *
    * **Behavior:**
    * - Returns null if no workspace file exists yet
-  * - Throws LegacyFormatError for v2.0, pre-v2.0, or invalid persisted v2.1 formats
+  * - Throws LegacyFormatError for v2.1, v2.0, pre-v2.0, or invalid persisted v2.2 formats
  * - Throws Error for other read failures
  *
    * @returns {Promise<NormalizedFileData | null>} Normalized data or null
-   * @throws {LegacyFormatError} If file is not canonical persisted v2.1 data
+  * @throws {LegacyFormatError} If file is not canonical persisted v2.2 data
    * @throws {Error} If file read fails for other reasons
    * 
    * @example
@@ -390,7 +390,7 @@ export class FileStorageService {
  * This method bypasses format validation and returns the raw persisted file contents.
    * **Only for use by migration utilities** that need to read legacy formats.
    * 
- * Normal application code should use readFileData() which enforces v2.1 format.
+ * Normal application code should use readFileData() which enforces v2.2 format.
  *
    * @returns {Promise<unknown>} Raw file data or null if no file exists
    * @throws {Error} If file read fails
@@ -408,27 +408,16 @@ export class FileStorageService {
   }
 
   private async readCanonicalNormalizedData(
-    rawData: PersistedNormalizedFileDataV21,
+    rawData: PersistedNormalizedFileDataV22,
   ): Promise<NormalizedFileData> {
-    logger.debug("Detected normalized data format (v2.1)");
+    logger.debug("Detected normalized data format (v2.2)");
 
     const hydratedData = this.hydratePersistedRuntimeData(rawData);
-    const { canonicalData, shouldRewriteApplications } = this.syncReadApplications(
-      rawData,
+    const { normalizedData, hasFinancialMigration } = this.applyFinancialMigration(
       hydratedData,
     );
-    const { normalizedData, hasFinancialMigration } = this.applyFinancialMigration(
-      canonicalData,
-    );
 
-    if (shouldRewriteApplications) {
-      logger.info("Migrated workspace applications into canonical persisted records", {
-        caseCount: normalizedData.cases.length,
-        applicationCount: normalizedData.applications?.length ?? 0,
-      });
-    }
-
-    if (shouldRewriteApplications || hasFinancialMigration) {
+    if (hasFinancialMigration) {
       return await this.writeNormalizedData(normalizedData);
     }
 
@@ -436,42 +425,20 @@ export class FileStorageService {
   }
 
   private hydratePersistedRuntimeData(
-    rawData: PersistedNormalizedFileDataV21,
+    rawData: PersistedNormalizedFileDataV22,
   ): NormalizedFileData {
     try {
       return hydrateNormalizedData(rawData);
     } catch (error) {
-      logger.error("Persisted v2.1 data failed canonical hydration", {
+      logger.error("Persisted v2.2 data failed canonical hydration", {
         error: error instanceof Error ? error.message : "Unknown error",
       });
       const hydrationError =
         error instanceof Error && error.message.trim().length > 0
           ? error.message
           : "unknown hydration error";
-      throw new LegacyFormatError(`${INVALID_V2_1_FORMAT_PREFIX}: ${hydrationError}`);
+      throw new LegacyFormatError(`${INVALID_V2_2_FORMAT_PREFIX}: ${hydrationError}`);
     }
-  }
-
-  private syncReadApplications(
-    rawData: PersistedNormalizedFileDataV21,
-    hydratedData: NormalizedFileData,
-  ): { canonicalData: NormalizedFileData; shouldRewriteApplications: boolean } {
-    const { applications: syncedApplications, hasChanged } =
-      syncRuntimeApplications(hydratedData);
-    const shouldRewriteApplications =
-      hasChanged ||
-      persistedCasesContainLegacyApplicationFields(rawData.cases) ||
-      ((rawData.applications?.length ?? 0) === 0 && rawData.cases.length > 0);
-
-    return {
-      canonicalData: hasChanged
-        ? {
-            ...hydratedData,
-            applications: syncedApplications,
-          }
-        : hydratedData,
-      shouldRewriteApplications,
-    };
   }
 
   private applyFinancialMigration(
@@ -550,8 +517,12 @@ export class FileStorageService {
       return LEGACY_FORMAT_V2_0;
     }
 
+    if (obj.version === LEGACY_FORMAT_V2_1) {
+      return LEGACY_FORMAT_V2_1;
+    }
+
     if (obj.version === NORMALIZED_VERSION) {
-      return INVALID_V2_1_FORMAT_PREFIX;
+      return INVALID_V2_2_FORMAT_PREFIX;
     }
 
     return `v${obj.version}`;
@@ -590,14 +561,14 @@ export class FileStorageService {
    * 
    * The `data` argument can be provided in three closely related shapes:
    * - `NormalizedFileData`: runtime-ready normalized data used throughout the app.
-   * - `PersistedNormalizedFileDataV21`: hydrated persisted v2.1 storage shape.
+  * - `PersistedNormalizedFileDataV22`: canonical persisted v2.2 storage shape.
    * - `CaseDehydratedNormalizedFileData`: normalized data where cases have been
    *   "dehydrated" to their persisted form (typically produced by
    *   `dehydrateNormalizedData` for efficient writes/broadcasts and usually not
    *   hand-authored by callers).
    *
-   * @param {NormalizedFileData | PersistedNormalizedFileDataV21 | CaseDehydratedNormalizedFileData} data - Normalized
-   *   runtime data, persisted-style v2.1 data, or case-dehydrated normalized data
+  * @param {NormalizedFileData | PersistedNormalizedFileDataV22 | CaseDehydratedNormalizedFileData} data - Normalized
+  *   runtime data, persisted-style v2.2 data, or case-dehydrated normalized data
    *   to write through the canonical storage path
    * @returns {Promise<NormalizedFileData>} The written data after enrichment
    * @throws {Error} If write operation fails
@@ -694,7 +665,7 @@ export class FileStorageService {
 
   private buildFinalWriteData(runtimeData: NormalizedFileData): NormalizedFileData {
     return {
-      version: NORMALIZED_VERSION as "2.1",
+      version: NORMALIZED_VERSION as "2.2",
       people: runtimeData.people.map((person) => ({ ...person })),
       cases: runtimeData.cases.map((caseItem) => ({ ...caseItem })),
       applications: runtimeData.applications?.map(cloneApplicationForWrite),

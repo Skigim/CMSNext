@@ -64,9 +64,9 @@ import {
   MAIN_WORKSPACE_FILE_NAME,
   buildWorkspaceMigrationReport,
   createEmptyMigrationCounts,
-  migrateArchiveDataToPersistedV21,
+  migrateArchiveDataToPersistedV22,
   summarizeUnknownCounts,
-  validatePersistedV21Data,
+  validatePersistedV22Data,
   type WorkspaceMigrationFileReport,
   type WorkspaceMigrationReport,
 } from "./workspaceV21Migration";
@@ -74,7 +74,9 @@ import { isNormalizedFileData } from "./services/FileStorageService";
 import {
   hydrateNormalizedData,
   isPersistedNormalizedFileDataV20,
+  isPersistedNormalizedFileDataV21,
   migrateV20ToV21,
+  migrateV21ToV22,
 } from "./storageV21Migration";
 
 // ============================================================================
@@ -1516,7 +1518,7 @@ export class DataManager {
    * Explicitly migrate the current workspace and supported archive files to
    * persisted v2.1 format and validate the resulting data.
    */
-  async migrateWorkspaceToV21(): Promise<WorkspaceMigrationReport> {
+  async migrateWorkspaceToV22(): Promise<WorkspaceMigrationReport> {
     const files: WorkspaceMigrationFileReport[] = [];
     const disconnectedMainReport: WorkspaceMigrationFileReport = {
       fileName: MAIN_WORKSPACE_FILE_NAME,
@@ -1570,6 +1572,10 @@ export class DataManager {
     }
 
     return buildWorkspaceMigrationReport(files);
+  }
+
+  async migrateWorkspaceToV21(): Promise<WorkspaceMigrationReport> {
+    return this.migrateWorkspaceToV22();
   }
 
   // =============================================================================
@@ -1716,24 +1722,24 @@ export class DataManager {
       }
 
       if (isNormalizedFileData(rawData)) {
-        const validation = validatePersistedV21Data(rawData);
+        const validation = validatePersistedV22Data(rawData);
         return {
           fileName: MAIN_WORKSPACE_FILE_NAME,
           fileKind: "workspace",
-          disposition: validation.validationErrors.length === 0 ? "already-v2.1" : "failed",
+          disposition: validation.validationErrors.length === 0 ? "already-current" : "failed",
           sourceVersion: rawData.version,
           counts: validation.counts,
           validationErrors: validation.validationErrors,
           message:
             validation.validationErrors.length === 0
-              ? "Already persisted as v2.1."
-              : "Persisted v2.1 validation failed.",
+              ? "Already persisted as v2.2."
+              : "Persisted v2.2 validation failed.",
         };
       }
 
-      if (isPersistedNormalizedFileDataV20(rawData)) {
-        const migratedData = migrateV20ToV21(rawData);
-        const validation = validatePersistedV21Data(migratedData);
+      if (isPersistedNormalizedFileDataV21(rawData)) {
+        const migratedData = migrateV21ToV22(rawData);
+        const validation = validatePersistedV22Data(migratedData);
 
         if (validation.validationErrors.length > 0) {
           return {
@@ -1756,7 +1762,36 @@ export class DataManager {
           sourceVersion: rawData.version,
           counts: validation.counts,
           validationErrors: [],
-          message: "Migrated workspace file to persisted v2.1.",
+          message: "Migrated workspace file to persisted v2.2.",
+        };
+      }
+
+      if (isPersistedNormalizedFileDataV20(rawData)) {
+        const migratedData = migrateV21ToV22(migrateV20ToV21(rawData));
+        const validation = validatePersistedV22Data(migratedData);
+
+        if (validation.validationErrors.length > 0) {
+          return {
+            fileName: MAIN_WORKSPACE_FILE_NAME,
+            fileKind: "workspace",
+            disposition: "failed",
+            sourceVersion: rawData.version,
+            counts: validation.counts,
+            validationErrors: validation.validationErrors,
+            message: "Migration produced integrity errors.",
+          };
+        }
+
+        await this.fileStorage.writeNormalizedData(hydrateNormalizedData(migratedData));
+
+        return {
+          fileName: MAIN_WORKSPACE_FILE_NAME,
+          fileKind: "workspace",
+          disposition: "migrated",
+          sourceVersion: rawData.version,
+          counts: validation.counts,
+          validationErrors: [],
+          message: "Migrated workspace file to persisted v2.2.",
         };
       }
 
@@ -1803,7 +1838,7 @@ export class DataManager {
         };
       }
 
-      const migratedArchive = migrateArchiveDataToPersistedV21(rawData, fileName);
+      const migratedArchive = migrateArchiveDataToPersistedV22(rawData, fileName);
       if (!migratedArchive.data) {
         return {
           fileName,
@@ -1816,7 +1851,7 @@ export class DataManager {
         };
       }
 
-      const validation = validatePersistedV21Data(migratedArchive.data);
+      const validation = validatePersistedV22Data(migratedArchive.data);
       if (validation.validationErrors.length > 0) {
         return {
           fileName,
@@ -1847,13 +1882,13 @@ export class DataManager {
       return {
         fileName,
         fileKind: "archive",
-        disposition: migratedArchive.needsWrite ? "migrated" : "already-v2.1",
+        disposition: migratedArchive.needsWrite ? "migrated" : "already-current",
         sourceVersion: migratedArchive.sourceVersion,
         counts: validation.counts,
         validationErrors: [],
         message: migratedArchive.needsWrite
-          ? "Migrated archive file to persisted v2.1."
-          : "Already persisted as v2.1.",
+          ? "Migrated archive file to persisted v2.2."
+          : "Already persisted as v2.2.",
       };
     } catch (error) {
       return {

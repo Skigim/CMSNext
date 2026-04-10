@@ -9,7 +9,7 @@ import {
   selectOldestNonTerminalApplication,
 } from "@/domain/applications";
 
-const completionStatuses = new Set(["approved", "denied"]);
+const completionStatuses = new Set(["closed", "archived"]);
 
 function selectApplication(
   applications: ReturnType<typeof createMockApplication>[],
@@ -56,7 +56,7 @@ describe("selectOldestNonTerminalApplication", () => {
       createMockApplication({
         id: "application-approved",
         applicationDate: "2026-01-01",
-        status: "Approved",
+        status: "Closed",
       }),
       createMockApplication({
         id: "application-open-oldest",
@@ -137,12 +137,12 @@ describe("selectOldestNonTerminalApplication", () => {
       createMockApplication({
         id: "application-approved",
         applicationDate: "2026-01-01",
-        status: "Approved",
+        status: "Closed",
       }),
       createMockApplication({
         id: "application-denied",
         applicationDate: "2026-02-01",
-        status: "Denied",
+        status: "Archived",
       }),
     ];
 

@@ -172,7 +172,7 @@ Maintained by the storage + autosave working group. Align telemetry follow-ups w
 
 Core case CRUD is highly mature. March 2026 completed the normalized people hydration milestone, and the audited April follow-through confirmed that existing-person reuse and relationship-driven household rendering are already live in the intake and case-details UI. The remaining narrow limitation is that intake edit does not yet support reassigning the primary applicant to a different existing person.
 
-The v2.2 application foundation now spans the domain, storage, service, hook, and intake UI layers. Intake create and intake edit now read and write application-owned fields through canonical `applications[]`, choosing the oldest non-terminal application by `applicationDate` with deterministic fallback across terminal-only sets. When edit mode has no non-terminal application to target, application-owned fields remain visible but locked so unsupported changes do not leak back into compatibility data.
+The v2.2 application foundation now spans the domain, storage, service, hook, and intake UI layers. Intake create and intake edit now read and write application-owned fields through canonical `applications[]`, choosing the oldest non-terminal application by `applicationDate` with deterministic fallback across terminal-only sets. Normal runtime saves no longer reconstruct canonical applications from case-embedded compatibility fields, and when edit mode has no non-terminal application to target, application-owned fields remain visible but locked so unsupported changes do not leak back into compatibility data.
 
 Case-detail and other non-intake surfaces still rely on hydrated compatibility fields rather than a dedicated application timeline UI. Status history now synchronizes canonically underneath those flows, but it is not yet surfaced as a first-class user-facing timeline.
 
@@ -207,6 +207,7 @@ Case-detail and other non-intake surfaces still rely on hydrated compatibility f
 - **Application Storage + Service Wiring**: Canonical `applications[]` support is now wired through storage migration helpers, `FileStorageService`, `DataManager`, and `ApplicationService` so the data layer can persist and manage application records independently of the case shell
 - **Canonical Intake Ownership**: Intake create/edit now persist application-owned fields through canonical application records instead of treating legacy case-embedded values as the source of truth
 - **Deterministic Application Selection**: Hydration and compatibility reads now choose the oldest non-terminal application by `applicationDate`, with deterministic fallback ordering for terminal-only sets
+- **Bridge-Free Runtime Writes**: New case creation and editable intake updates now write canonical applications explicitly, while ordinary runtime reads and case saves no longer rewrite or synthesize `applications[]`
 - **Protected Non-Intake Edits**: Live case-edit sections keep application-owned fields visible but disabled outside intake while downstream AVS-processing and review markers remain editable
 - **Import/Export**: Bulk operations with duplicate detection and progress indicators
 - **Autosave Integration**: Forms seamlessly integrate with AutosaveFileService for reliable persistence

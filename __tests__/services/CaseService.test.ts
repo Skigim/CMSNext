@@ -291,6 +291,13 @@ describe("CaseService hydration seam", () => {
         },
       ]);
       expect(writtenData.cases[0].caseRecord.personId).toBe(writtenData.people[0].id);
+      expect(writtenData.applications).toHaveLength(1);
+      expect(writtenData.applications[0]).toMatchObject({
+        caseId: writtenData.cases[0].id,
+        applicantPersonId: writtenData.people[0].id,
+        applicationDate: newCaseRecordData.applicationDate,
+        applicationType: newCaseRecordData.applicationType ?? "",
+      });
       expect(result.person).toMatchObject({
         id: writtenData.people[0].id,
         firstName: "Taylor",
@@ -564,6 +571,106 @@ describe("CaseService hydration seam", () => {
   });
 
   describe("updateCaseStatus", () => {
+    it("does not rewrite canonical application fields during a plain case update", async () => {
+      // ARRANGE
+      const primaryPerson = createMockPerson({
+        id: "person-case-1",
+        firstName: "Primary",
+        lastName: "Person",
+        name: "Primary Person",
+      });
+      const canonicalApplication = createMockApplication({
+        id: "application-1",
+        caseId: "case-1",
+        applicantPersonId: "person-case-1",
+        applicationDate: "2026-02-15",
+        applicationType: "Renewal",
+        hasWaiver: true,
+        retroRequestedAt: "2026-01-01",
+        retroMonths: ["Jan", "Feb"],
+        verification: {
+          isAppValidated: true,
+          isAgedDisabledVerified: true,
+          isCitizenshipVerified: true,
+          isResidencyVerified: true,
+          avsConsentDate: "2026-02-16",
+          voterFormStatus: "requested",
+          isIntakeCompleted: true,
+        },
+      });
+      vi.mocked(mockFileService.readFile).mockResolvedValue(
+        createMockPersistedNormalizedFileData({
+          people: [primaryPerson],
+          cases: [
+            createCaseWithPrimaryApplicant(primaryPerson, {
+              caseRecord: {
+                mcn: "MCN-ORIGINAL",
+                applicationDate: "2026-02-15",
+                applicationType: "Renewal",
+                withWaiver: true,
+                retroRequested: "2026-01-01",
+                appValidated: true,
+                agedDisabledVerified: true,
+                citizenshipVerified: true,
+                residencyVerified: true,
+                avsConsentDate: "2026-02-16",
+                voterFormStatus: "requested",
+                retroMonths: ["Jan", "Feb"],
+                status: "Pending",
+              },
+            }),
+          ],
+          applications: [canonicalApplication],
+        }),
+      );
+      vi.mocked(mockFileService.writeFile).mockResolvedValue(true);
+
+      // ACT
+      await caseService.updateCompleteCase("case-1", {
+        person: createMockNewPersonData({
+          firstName: "Primary",
+          lastName: "Person",
+        }),
+        caseRecord: createMockNewCaseRecordData({
+          personId: "person-case-1",
+          mcn: "MCN-UPDATED",
+          applicationDate: "2026-09-09",
+          applicationType: "Stale Disabled Edit",
+          withWaiver: false,
+          retroRequested: "2026-09-01",
+          appValidated: false,
+          agedDisabledVerified: false,
+          citizenshipVerified: false,
+          residencyVerified: false,
+          avsConsentDate: "2026-09-10",
+          voterFormStatus: "declined",
+          retroMonths: ["Sep"],
+          status: "Pending",
+        }),
+      });
+
+      // ASSERT
+      const writtenData = vi.mocked(mockFileService.writeFile).mock.calls[0][0];
+      expect(writtenData.applications).toHaveLength(1);
+      expect(writtenData.applications[0]).toMatchObject({
+        id: "application-1",
+        applicationDate: "2026-02-15",
+        applicationType: "Renewal",
+        hasWaiver: true,
+        retroRequestedAt: "2026-01-01",
+        retroMonths: ["Jan", "Feb"],
+        verification: {
+          isAppValidated: true,
+          isAgedDisabledVerified: true,
+          isCitizenshipVerified: true,
+          isResidencyVerified: true,
+          avsConsentDate: "2026-02-16",
+          voterFormStatus: "requested",
+          isIntakeCompleted: true,
+        },
+      });
+    });
+
     it("synchronizes canonical application status/history while preserving historical applicant linkage", async () => {
       // ARRANGE
       const primaryPerson = createMockPerson({ id: "person-case-1", name: "Primary Person" });
@@ -619,7 +726,7 @@ describe("CaseService hydration seam", () => {
         applicationDate: "2026-01-01",
         applicationType: "Renewal",
         createdAt: "2026-01-01T00:00:00.000Z",
-        status: "Approved",
+        status: "Closed",
         hasWaiver: true,
         retroRequestedAt: "2025-12-01",
         retroMonths: ["2025-12"],
@@ -635,7 +742,7 @@ describe("CaseService hydration seam", () => {
         statusHistory: [
           {
             id: "history-1",
-            status: "Approved",
+            status: "Closed",
             effectiveDate: "2026-01-01",
             changedAt: "2026-01-01T00:00:00.000Z",
             source: "migration",
@@ -648,11 +755,11 @@ describe("CaseService hydration seam", () => {
         applicantPersonId: "person-case-1",
         applicationDate: "2026-03-01",
         createdAt: "2026-03-01T00:00:00.000Z",
-        status: "Denied",
+        status: "Archived",
         statusHistory: [
           {
             id: "history-2",
-            status: "Denied",
+            status: "Archived",
             effectiveDate: "2026-03-01",
             changedAt: "2026-03-01T00:00:00.000Z",
             source: "migration",
@@ -663,17 +770,17 @@ describe("CaseService hydration seam", () => {
         createMockPersistedNormalizedFileData({
           categoryConfig: mergeCategoryConfig({
             caseStatuses: [
-              { name: "Approved", colorSlot: "green", countsAsCompleted: true },
-              { name: "Denied", colorSlot: "red", countsAsCompleted: true },
+              { name: "Closed", colorSlot: "slate", countsAsCompleted: true },
+              { name: "Archived", colorSlot: "purple", countsAsCompleted: true },
               { name: "Pending", colorSlot: "amber", countsAsCompleted: false },
             ],
           }),
           people: [primaryPerson],
           cases: [
             createCaseWithPrimaryApplicant(primaryPerson, {
-              status: "Approved" as CaseStatus,
+              status: "Closed",
               caseRecord: {
-                status: "Approved" as CaseStatus,
+                status: "Closed",
                 applicationDate: "1999-04-01",
                 applicationType: "Stale Legacy Type",
                 withWaiver: false,

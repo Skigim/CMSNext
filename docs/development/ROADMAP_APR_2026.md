@@ -193,7 +193,7 @@ Every feature must:
 
 ### Recommended Next Step
 
-Follow the canonical-intake ownership PR with the cleanup-and-surfacing slice: add application status-history rendering, decide how case-detail surfaces should present the selected canonical application data, and remove legacy migration-on-save or compatibility write paths once those screens are stable.
+Follow the canonical-intake ownership cleanup with the surfacing slice: add application status-history rendering and decide how case-detail surfaces should present the selected canonical application data now that legacy migration-on-save and read-time application rewrites have been removed from the normal runtime path.
 
 ---
 

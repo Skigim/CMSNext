@@ -1,15 +1,13 @@
-import type { CaseStatus, CaseRecord, VoterFormStatus } from "@/types/case";
+import { CASE_STATUS, type CaseStatus, type CaseRecord, type VoterFormStatus } from "@/types/case";
 
 export const APPLICATION_STATUS = {
-  Received: "Received",
-  Pending: "Pending",
-  Withdrawn: "Withdrawn",
-  Approved: "Approved",
-  Denied: "Denied",
+  Active: CASE_STATUS.Active,
+  Pending: CASE_STATUS.Pending,
+  Closed: CASE_STATUS.Closed,
+  Archived: CASE_STATUS.Archived,
 } as const;
 
-export type ApplicationStatus =
-  (typeof APPLICATION_STATUS)[keyof typeof APPLICATION_STATUS];
+export type ApplicationStatus = CaseStatus;
 
 export type ApplicationStatusHistorySource = "migration" | "user";
 

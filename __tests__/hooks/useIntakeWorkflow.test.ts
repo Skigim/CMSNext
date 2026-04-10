@@ -3,7 +3,6 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createBlankIntakeForm } from "@/domain/validation/intake.schema";
 import { INTAKE_STEPS } from "@/domain/cases/intake-steps";
 import { APPLICATION_STATUS } from "@/types/application";
-import type { CaseStatus } from "@/types/case";
 import {
   createMockApplication,
   createMockHouseholdMemberData,
@@ -40,6 +39,7 @@ vi.mock("@/hooks/useDataSync", () => ({
 const mockDataManager = {
   createCompleteCase: vi.fn(),
   updateCompleteCase: vi.fn(),
+  updateApplication: vi.fn(),
   getAllPeople: vi.fn(),
   getApplicationsForCase: vi.fn(),
   getCaseById: vi.fn(),
@@ -54,9 +54,9 @@ const mockCategoryConfig = {
   caseStatuses: [
     { name: "Intake", colorSlot: "blue", countsAsCompleted: false },
     { name: "Pending", colorSlot: "amber", countsAsCompleted: false },
-    { name: "Approved", colorSlot: "green", countsAsCompleted: true },
-    { name: "Denied", colorSlot: "red", countsAsCompleted: true },
-    { name: "Withdrawn", colorSlot: "slate", countsAsCompleted: true },
+    { name: "Active", colorSlot: "green", countsAsCompleted: false },
+    { name: "Closed", colorSlot: "slate", countsAsCompleted: true },
+    { name: "Archived", colorSlot: "purple", countsAsCompleted: true },
   ],
   livingArrangements: ["Community"],
   groups: [],
@@ -149,6 +149,7 @@ describe("useIntakeWorkflow", () => {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     });
+      mockDataManager.updateApplication.mockResolvedValue(createMockApplication());
     // Keep people reads pending by default so tests that only care about
     // immediate mount state do not trigger avoidable async act warnings.
     mockDataManager.getAllPeople.mockImplementation(() => createPendingPromise());
@@ -294,12 +295,12 @@ describe("useIntakeWorkflow", () => {
       const terminalApplications = [
         createCaseApplication("case-edit-1", {
           id: "application-approved-1",
-          status: APPLICATION_STATUS.Approved,
+          status: APPLICATION_STATUS.Closed,
           applicationDate: "2026-01-01",
         }),
         createCaseApplication("case-edit-1", {
           id: "application-denied-1",
-          status: APPLICATION_STATUS.Denied,
+          status: APPLICATION_STATUS.Archived,
           applicationDate: "2026-02-01",
         }),
       ];
@@ -322,7 +323,7 @@ describe("useIntakeWorkflow", () => {
       const applications = [
         createCaseApplication("case-edit-1", {
           id: "application-approved-1",
-          status: APPLICATION_STATUS.Approved,
+          status: APPLICATION_STATUS.Closed,
           applicationDate: "2026-01-01",
         }),
         createCaseApplication("case-edit-1", {
@@ -397,7 +398,7 @@ describe("useIntakeWorkflow", () => {
       const refreshedApplications = [
         createCaseApplication("case-edit-1", {
           id: "application-approved-1",
-          status: APPLICATION_STATUS.Approved,
+          status: APPLICATION_STATUS.Closed,
           applicationDate: "2026-03-01",
         }),
       ];
@@ -444,7 +445,7 @@ describe("useIntakeWorkflow", () => {
       const terminalApplications = [
         createCaseApplication("case-terminal-1", {
           id: "application-approved-1",
-          status: APPLICATION_STATUS.Approved,
+          status: APPLICATION_STATUS.Closed,
           applicationDate: "2026-03-01",
         }),
       ];
@@ -1104,7 +1105,7 @@ describe("useIntakeWorkflow", () => {
           avsConsentDate: "2026-02-16",
           voterFormStatus: "requested",
           retroMonths: ["Jan", "Feb"],
-          status: "Approved" as CaseStatus,
+          status: "Closed",
         },
         person: createMockPerson({
           id: "person-edit-1",
@@ -1119,7 +1120,7 @@ describe("useIntakeWorkflow", () => {
         createMockApplication({
           id: "application-terminal-1",
           caseId: "case-edit-1",
-          status: APPLICATION_STATUS.Approved,
+          status: APPLICATION_STATUS.Closed,
           applicationDate: "2026-02-15",
         }),
       ]);
@@ -1166,7 +1167,7 @@ describe("useIntakeWorkflow", () => {
             avsConsentDate: "2026-02-16",
             voterFormStatus: "requested",
             retroMonths: ["Jan", "Feb"],
-            status: "Approved",
+            status: "Closed",
           }),
         }),
       );
@@ -1226,6 +1227,16 @@ describe("useIntakeWorkflow", () => {
           }),
         }),
       );
+      expect(mockDataManager.updateApplication).toHaveBeenCalledWith(
+        "case-edit-1",
+        "application-pending-1",
+        expect.objectContaining({
+          applicationDate: "2026-02-15",
+          verification: expect.objectContaining({
+            avsConsentDate: "",
+          }),
+        }),
+      );
     });
 
     it("refreshes the locked-field preservation source when same-case data changes", async () => {
@@ -1246,7 +1257,7 @@ describe("useIntakeWorkflow", () => {
           avsConsentDate: "2026-02-16",
           voterFormStatus: "requested",
           retroMonths: ["Jan", "Feb"],
-          status: "Approved" as CaseStatus,
+          status: "Closed",
         },
         person: createMockPerson({
           id: "person-edit-1",
@@ -1281,7 +1292,7 @@ describe("useIntakeWorkflow", () => {
           createMockApplication({
             id: "application-terminal-1",
             caseId: "case-edit-1",
-            status: APPLICATION_STATUS.Approved,
+            status: APPLICATION_STATUS.Closed,
             applicationDate: "2026-02-15",
           }),
         ])
@@ -1289,7 +1300,7 @@ describe("useIntakeWorkflow", () => {
           createMockApplication({
             id: "application-terminal-2",
             caseId: "case-edit-1",
-            status: APPLICATION_STATUS.Approved,
+            status: APPLICATION_STATUS.Closed,
             applicationDate: "2026-03-01",
           }),
         ]);

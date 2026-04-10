@@ -17,7 +17,7 @@ const createMockFileStorage = (data: NormalizedFileData | null = null) => ({
 const createMockFileData = (
   overrides: Partial<NormalizedFileData> = {}
 ): NormalizedFileData => ({
-  version: '2.1',
+  version: '2.2',
   people: [],
   exported_at: new Date().toISOString(),
   total_cases: overrides.cases?.length ?? 0,

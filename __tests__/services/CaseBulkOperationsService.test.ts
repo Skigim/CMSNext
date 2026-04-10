@@ -90,15 +90,15 @@ describe('CaseBulkOperationsService', () => {
     return {
       ...defaultCategoryConfig,
       caseStatuses: [
-        { name: 'Approved', colorSlot: 'green', countsAsCompleted: true },
-        { name: 'Denied', colorSlot: 'red', countsAsCompleted: true },
+        { name: 'Closed', colorSlot: 'slate', countsAsCompleted: true },
+        { name: 'Archived', colorSlot: 'purple', countsAsCompleted: true },
         { name: 'Pending', colorSlot: 'amber', countsAsCompleted: false },
       ],
     };
   }
 
   function createCanonicalStatusSyncData(primaryPersonId = 'person-1') {
-    const baseCase = createMockCase('case-1', 'Approved' as CaseStatus);
+    const baseCase = createMockCase('case-1', 'Closed');
     const data = createEmptyNormalizedData({
       categoryConfig: createCompletedStatusConfig(),
       people: [
@@ -130,7 +130,7 @@ describe('CaseBulkOperationsService', () => {
           applicantPersonId: primaryPersonId,
           applicationDate: '2026-01-01',
           applicationType: 'Renewal',
-          status: 'Approved',
+          status: 'Closed',
           hasWaiver: true,
           retroRequestedAt: '2025-12-01',
           retroMonths: ['2025-12'],
@@ -146,7 +146,7 @@ describe('CaseBulkOperationsService', () => {
           statusHistory: [
             {
               id: 'history-1',
-              status: 'Approved',
+              status: 'Closed',
               effectiveDate: '2026-01-01',
               changedAt: '2026-01-01T00:00:00.000Z',
               source: 'migration',
@@ -415,7 +415,7 @@ describe('CaseBulkOperationsService', () => {
       expect(writtenData.applications?.[0].statusHistory).toEqual([
         {
           id: 'history-1',
-          status: 'Approved',
+          status: 'Closed',
           effectiveDate: '2026-01-01',
           changedAt: '2026-01-01T00:00:00.000Z',
           source: 'migration',
@@ -640,7 +640,7 @@ describe('CaseBulkOperationsService', () => {
 
       expect(mockFileStorage.writeNormalizedData).toHaveBeenCalledWith(
         expect.objectContaining({
-          version: '2.1',
+          version: '2.2',
           people: [],
           cases: [],
           financials: [],

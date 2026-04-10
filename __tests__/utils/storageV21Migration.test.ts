@@ -6,6 +6,7 @@ import {
   createMockNormalizedFileData,
   createMockPerson,
   createMockPersistedNormalizedFileData,
+  createMockPersistedNormalizedFileDataV21,
   createMockStoredCase,
 } from "@/src/test/testUtils";
 import type { ApplicationStatus } from "@/types/application";
@@ -14,9 +15,11 @@ import type { NormalizedFileDataV20, PersistedNormalizedFileDataV21 } from "@/ut
 import {
   dehydrateNormalizedData,
   hydrateNormalizedData,
+  hydratePersistedNormalizedDataV21ForUpgrade,
   isPersistedNormalizedFileDataV20,
   isPersistedNormalizedFileDataV21,
   migrateV20ToV21,
+  migrateV21ToV22,
   normalizePersistedApplication,
   persistedCasesContainLegacyApplicationFields,
   syncRuntimeApplications,
@@ -192,7 +195,7 @@ describe("storageV21Migration", () => {
       activityLog: [],
     };
 
-    const hydrated = hydrateNormalizedData(persistedData);
+    const hydrated = hydratePersistedNormalizedDataV21ForUpgrade(persistedData);
 
     expect(hydrated.cases[0].person.id).toBe("person-1");
     expect(hydrated.cases[0].linkedPeople).toHaveLength(2);
@@ -203,8 +206,7 @@ describe("storageV21Migration", () => {
     // ARRANGE
     const runtimeCase = createMockStoredCase();
     delete (runtimeCase.caseRecord as { intakeCompleted?: boolean }).intakeCompleted;
-    const persistedData = dehydrateNormalizedData({
-      version: "2.1",
+    const persistedData = createMockPersistedNormalizedFileDataV21({
       people: [createMockPerson()],
       cases: [runtimeCase],
       financials: [],
@@ -218,7 +220,7 @@ describe("storageV21Migration", () => {
     delete (persistedData.cases[0].caseRecord as { intakeCompleted?: boolean }).intakeCompleted;
 
     // ACT
-    const hydrated = hydrateNormalizedData(persistedData);
+    const hydrated = hydratePersistedNormalizedDataV21ForUpgrade(persistedData);
 
     // ASSERT
     expect(hydrated.cases[0].caseRecord.intakeCompleted).toBe(true);
@@ -307,12 +309,12 @@ describe("storageV21Migration", () => {
     expect(dehydrated.applications?.[0].verification).not.toHaveProperty("legacyFlag");
   });
 
-  it("writes intakeCompleted as true when dehydrating historical runtime cases without the field", () => {
+  it("does not synthesize applications when dehydrating historical runtime cases without the field", () => {
     // ARRANGE
     const runtimeCase = createMockStoredCase();
     delete (runtimeCase.caseRecord as { intakeCompleted?: boolean }).intakeCompleted;
     const runtimeData = {
-      version: "2.1" as const,
+      version: "2.2" as const,
       people: [createMockPerson()],
       cases: [runtimeCase],
       financials: [],
@@ -328,12 +330,10 @@ describe("storageV21Migration", () => {
     const dehydrated = dehydrateNormalizedData(runtimeData);
 
     // ASSERT
-    expect(dehydrated.applications).toBeDefined();
-    expect(dehydrated.applications).toHaveLength(1);
-    expect(dehydrated.applications![0].verification.isIntakeCompleted).toBe(true);
+    expect(dehydrated.applications).toEqual([]);
   });
 
-  it("stores applications canonically and strips application-owned case fields during dehydration", () => {
+  it("does not synthesize applications during dehydration when runtime data has none", () => {
     // ARRANGE
     const runtimeCase = createMockStoredCase({
       id: "case-1",
@@ -350,7 +350,7 @@ describe("storageV21Migration", () => {
 
     // ACT
     const dehydrated = dehydrateNormalizedData({
-      version: "2.1",
+      version: "2.2",
       people: [createMockPerson({ id: "person-1" })],
       cases: [runtimeCase],
       applications: [],
@@ -364,13 +364,7 @@ describe("storageV21Migration", () => {
     });
 
     // ASSERT
-    expect(dehydrated.applications).toHaveLength(1);
-    expect(dehydrated.applications?.[0]).toMatchObject({
-      caseId: "case-1",
-      applicationType: "Renewal",
-      hasWaiver: true,
-      retroRequestedAt: "2026-02-01",
-    });
+    expect(dehydrated.applications).toEqual([]);
     expect(dehydrated.cases[0].caseRecord).not.toHaveProperty("applicationDate");
     expect(dehydrated.cases[0].caseRecord).not.toHaveProperty("retroRequested");
     expect(dehydrated.cases[0].caseRecord).not.toHaveProperty("withWaiver");
@@ -399,7 +393,7 @@ describe("storageV21Migration", () => {
           id: "application-approved",
           caseId: "case-1",
           applicationDate: "2026-01-01",
-          status: "Approved",
+          status: "Closed",
           applicationType: "Closed Application",
           updatedAt: "2026-04-03T00:00:00.000Z",
         }),
@@ -424,7 +418,7 @@ describe("storageV21Migration", () => {
         caseStatuses: [
           { name: "Pending Review", colorSlot: "amber", countsAsCompleted: false },
           { name: "Escalated", colorSlot: "orange", countsAsCompleted: false },
-          { name: "Approved", colorSlot: "green", countsAsCompleted: true },
+          { name: "Closed", colorSlot: "slate", countsAsCompleted: true },
         ],
       }),
     });
@@ -464,7 +458,7 @@ describe("storageV21Migration", () => {
           id: "application-terminal-oldest",
           caseId: "case-1",
           applicationDate: "2026-01-01",
-          status: "Approved",
+          status: "Closed",
           applicationType: "Renewal",
           hasWaiver: true,
           retroRequestedAt: "2025-12-01",
@@ -474,7 +468,7 @@ describe("storageV21Migration", () => {
           id: "application-terminal-newer",
           caseId: "case-1",
           applicationDate: "2026-03-01",
-          status: "Denied",
+          status: "Archived",
           applicationType: "Change Report",
           hasWaiver: false,
           retroRequestedAt: null,
@@ -483,8 +477,8 @@ describe("storageV21Migration", () => {
       ],
       categoryConfig: mergeCategoryConfig({
         caseStatuses: [
-          { name: "Approved", colorSlot: "green", countsAsCompleted: true },
-          { name: "Denied", colorSlot: "red", countsAsCompleted: true },
+          { name: "Closed", colorSlot: "slate", countsAsCompleted: true },
+          { name: "Archived", colorSlot: "purple", countsAsCompleted: true },
           { name: "Pending Review", colorSlot: "amber", countsAsCompleted: false },
         ],
       }),
@@ -498,13 +492,13 @@ describe("storageV21Migration", () => {
     expect(hydrated.cases[0].caseRecord.applicationType).toBe("Renewal");
     expect(hydrated.cases[0].caseRecord.withWaiver).toBe(true);
     expect(hydrated.cases[0].caseRecord.retroRequested).toBe("2025-12-01");
-    expect(hydrated.cases[0].caseRecord.status).toBe("Approved");
+    expect(hydrated.cases[0].caseRecord.status).toBe("Closed");
   });
 
   it("hydrates runtime case fields back from canonical applications", () => {
     // ARRANGE
     const persistedData = dehydrateNormalizedData({
-      version: "2.1",
+      version: "2.2",
       people: [createMockPerson({ id: "person-1" })],
       cases: [
         createMockStoredCase({
@@ -686,11 +680,11 @@ describe("storageV21Migration", () => {
       applicantPersonId: "person-1",
       applicationDate: "2026-03-01",
       createdAt: "2026-03-01T00:00:00.000Z",
-      status: "Denied",
+      status: "Archived",
       statusHistory: [
         {
           id: "history-2",
-          status: "Denied",
+          status: "Archived",
           effectiveDate: "2026-03-01",
           changedAt: "2026-03-01T00:00:00.000Z",
           source: "migration",
@@ -700,8 +694,8 @@ describe("storageV21Migration", () => {
     const runtimeData = createMockNormalizedFileData({
       categoryConfig: mergeCategoryConfig({
         caseStatuses: [
-          { name: "Approved", colorSlot: "green", countsAsCompleted: true },
-          { name: "Denied", colorSlot: "red", countsAsCompleted: true },
+          { name: "Closed", colorSlot: "slate", countsAsCompleted: true },
+          { name: "Archived", colorSlot: "purple", countsAsCompleted: true },
           { name: "Pending", colorSlot: "amber", countsAsCompleted: false },
         ],
       }),
@@ -728,11 +722,11 @@ describe("storageV21Migration", () => {
           applicantPersonId: "person-1",
           applicationDate: "2026-01-01",
           createdAt: "2026-01-01T00:00:00.000Z",
-          status: "Approved",
+          status: "Closed",
           statusHistory: [
             {
               id: "history-1",
-              status: "Approved",
+              status: "Closed",
               effectiveDate: "2026-01-01",
               changedAt: "2026-01-01T00:00:00.000Z",
               source: "migration",
@@ -773,11 +767,11 @@ describe("storageV21Migration", () => {
       applicantPersonId: "person-1",
       applicationDate: "2026-03-01",
       createdAt: "2026-03-01T00:00:00.000Z",
-      status: "Denied",
+      status: "Archived",
       statusHistory: [
         {
           id: "history-2",
-          status: "Denied",
+          status: "Archived",
           effectiveDate: "2026-03-01",
           changedAt: "2026-03-01T00:00:00.000Z",
           source: "migration",
@@ -787,8 +781,8 @@ describe("storageV21Migration", () => {
     const runtimeData = createMockNormalizedFileData({
       categoryConfig: mergeCategoryConfig({
         caseStatuses: [
-          { name: "Approved", colorSlot: "green", countsAsCompleted: true },
-          { name: "Denied", colorSlot: "red", countsAsCompleted: true },
+          { name: "Closed", colorSlot: "slate", countsAsCompleted: true },
+          { name: "Archived", colorSlot: "purple", countsAsCompleted: true },
           { name: "Pending", colorSlot: "amber", countsAsCompleted: false },
         ],
       }),
@@ -826,7 +820,7 @@ describe("storageV21Migration", () => {
           applicationDate: "2026-01-01",
           applicationType: "Renewal",
           createdAt: "2026-01-01T00:00:00.000Z",
-          status: "Approved",
+          status: "Closed",
           hasWaiver: true,
           retroRequestedAt: "2025-12-01",
           retroMonths: ["2025-12"],
@@ -842,7 +836,7 @@ describe("storageV21Migration", () => {
           statusHistory: [
             {
               id: "history-1",
-              status: "Approved",
+              status: "Closed",
               effectiveDate: "2026-01-01",
               changedAt: "2026-01-01T00:00:00.000Z",
               source: "migration",
@@ -886,7 +880,7 @@ describe("storageV21Migration", () => {
     expect(result.applications.find((application) => application.id === "application-1")?.statusHistory).toEqual([
       {
         id: "history-1",
-        status: "Approved",
+        status: "Closed",
         effectiveDate: "2026-01-01",
         changedAt: "2026-01-01T00:00:00.000Z",
         source: "migration",
@@ -951,7 +945,7 @@ describe("storageV21Migration", () => {
   });
 
   it("dehydrates runtime familyMembers into familyMemberIds and legacyFamilyMemberNames", () => {
-    const runtimeData = hydrateNormalizedData(
+    const runtimeData = hydratePersistedNormalizedDataV21ForUpgrade(
       migrateV20ToV21({
         version: "2.0",
         cases: [
@@ -1014,6 +1008,80 @@ describe("storageV21Migration", () => {
     expect(migrated.people[0].updatedAt).toBe(explicitUpdatedAt);
   });
 
+  it("normalizes missing intakeCompleted when creating migrated applications from v2.0 cases", () => {
+    // ARRANGE
+    const runtimeCase = createMockStoredCase({
+      id: "case-1",
+      person: createMockPerson({ id: "person-1" }),
+      people: [{ personId: "person-1", role: "applicant", isPrimary: true }],
+    });
+    delete (runtimeCase.caseRecord as { intakeCompleted?: boolean }).intakeCompleted;
+
+    // ACT
+    const migrated = migrateV20ToV21({
+      version: "2.0",
+      cases: [runtimeCase],
+      financials: [],
+      notes: [],
+      alerts: [],
+      exported_at: "2026-03-01T00:00:00.000Z",
+      total_cases: 1,
+      categoryConfig: mergeCategoryConfig(),
+      activityLog: [],
+    });
+
+    // ASSERT
+    const [migratedApplication] = migrated.applications ?? [];
+
+    expect(migrated.applications).toHaveLength(1);
+    expect(migratedApplication?.verification.isIntakeCompleted).toBe(true);
+  });
+
+  it("uses exported_at as the deterministic timestamp when upgrading v2.1 to v2.2", () => {
+    // ARRANGE
+    const exportedAt = "2026-03-01T00:00:00.000Z";
+    const runtimeCase = createMockStoredCase({
+      id: "case-1",
+      status: "Pending",
+      person: createMockPerson({ id: "person-1" }),
+      people: [{ personId: "person-1", role: "applicant", isPrimary: true }],
+      caseRecord: {
+        ...createMockStoredCase().caseRecord,
+        personId: "person-1",
+        status: "Pending",
+        applicationDate: "2026-02-15",
+      },
+    });
+    const persistedV21 = createMockPersistedNormalizedFileDataV21({
+      people: [runtimeCase.person],
+      cases: [runtimeCase],
+      financials: [],
+      notes: [],
+      alerts: [],
+      exported_at: exportedAt,
+      total_cases: 1,
+      categoryConfig: mergeCategoryConfig(),
+      activityLog: [],
+    });
+
+    // ACT
+    const migrated = migrateV21ToV22(persistedV21);
+
+    // ASSERT
+    const [migratedApplication] = migrated.applications ?? [];
+
+    expect(migrated.applications).toHaveLength(1);
+    expect(migratedApplication).toMatchObject({
+      createdAt: exportedAt,
+      updatedAt: exportedAt,
+      statusHistory: [
+        expect.objectContaining({
+          changedAt: exportedAt,
+        }),
+      ],
+    });
+  });
+
   it("round-trips runtime v2.1 data through dehydration and hydration without losing linked people", () => {
     const secondaryPerson = createMockPerson({
       id: "person-2",
@@ -1035,7 +1103,7 @@ describe("storageV21Migration", () => {
       dateAdded: "2026-01-01T00:00:00.000Z",
     });
     const runtimeData = {
-      version: "2.1" as const,
+      version: "2.2" as const,
       people: [primaryPerson, secondaryPerson],
       cases: [
         createMockStoredCase({
@@ -1073,7 +1141,7 @@ describe("storageV21Migration", () => {
     const roundTripped = hydrateNormalizedData(dehydrateNormalizedData(runtimeData));
     const roundTrippedPrimaryPerson = roundTripped.people.find((person) => person.id === "person-1");
 
-    expect(roundTripped.version).toBe("2.1");
+    expect(roundTripped.version).toBe("2.2");
     expect(roundTripped.people).toHaveLength(2);
     expect(roundTrippedPrimaryPerson).toMatchObject({
       id: "person-1",

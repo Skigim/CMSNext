@@ -28,7 +28,9 @@ import { discoverStatusesFromCases, discoverAlertTypesFromAlerts } from "./categ
 import { createLogger } from "./logger";
 import {
   hydrateNormalizedData,
+  hydratePersistedNormalizedDataV21ForUpgrade,
   isPersistedNormalizedFileDataV20,
+  isPersistedNormalizedFileDataV21,
   migrateV20ToV21,
 } from "./storageV21Migration";
 
@@ -139,7 +141,7 @@ export interface MigrationResult {
  */
 export function detectDataFormat(
   data: unknown,
-): "v2.0" | "v2.1" | "v1.x-nested" | "nightingale-raw" | "unknown" {
+): "v2.0" | "v2.1" | "v2.2" | "v1.x-nested" | "nightingale-raw" | "unknown" {
   if (!data || typeof data !== "object") {
     return "unknown";
   }
@@ -153,6 +155,10 @@ export function detectDataFormat(
 
   if (obj.version === "2.1" && Array.isArray(obj.cases) && Array.isArray(obj.people)) {
     return "v2.1";
+  }
+
+  if (obj.version === "2.2" && Array.isArray(obj.cases) && Array.isArray(obj.people)) {
+    return "v2.2";
   }
 
   // Check for Nightingale raw format
@@ -356,17 +362,32 @@ export function migrateLegacyData(rawData: unknown): MigrationResult {
     logger.info("Starting legacy data migration", { format });
 
       if (format === "v2.1") {
-       if (!isNormalizedFileData(rawData)) {
-         throw new Error(
-           "Detected v2.1 data is missing required normalized structure (people, cases, or associated metadata)",
-         );
-       }
-        logger.info("Data is already in v2.1 format, no migration needed");
-       return {
-         success: true,
-         data: hydrateNormalizedData(rawData),
-         stats,
-         errors,
+        if (!isPersistedNormalizedFileDataV21(rawData)) {
+          throw new Error(
+            "Detected v2.1 data is missing required normalized structure (people, cases, or associated metadata)",
+          );
+        }
+        logger.info("Data is in v2.1 format, upgrading to the canonical v2.2 runtime shape");
+        return {
+          success: true,
+          data: hydratePersistedNormalizedDataV21ForUpgrade(rawData),
+          stats,
+          errors,
+        };
+      }
+
+      if (format === "v2.2") {
+        if (!isNormalizedFileData(rawData)) {
+          throw new Error(
+            "Detected v2.2 data is missing required normalized structure (people, cases, or associated metadata)",
+          );
+        }
+        logger.info("Data is already in v2.2 format, no migration needed");
+        return {
+          success: true,
+          data: hydrateNormalizedData(rawData),
+          stats,
+          errors,
         };
       }
 
@@ -379,7 +400,7 @@ export function migrateLegacyData(rawData: unknown): MigrationResult {
         logger.info("Data is in v2.0 format, migrating to v2.1");
         return {
           success: true,
-          data: hydrateNormalizedData(migrateV20ToV21(rawData)),
+          data: hydratePersistedNormalizedDataV21ForUpgrade(migrateV20ToV21(rawData)),
           stats,
           errors,
         };
@@ -444,7 +465,7 @@ export function migrateLegacyData(rawData: unknown): MigrationResult {
 
     // Build normalized data
     const normalizedData: NormalizedFileData = {
-      version: "2.1",
+      version: "2.2",
       people: cases.map((caseItem) => caseItem.person),
       cases,
       financials,
@@ -490,7 +511,9 @@ export function getFormatDescription(format: ReturnType<typeof detectDataFormat>
     case "v2.0":
       return "v2.0 Normalized Format";
     case "v2.1":
-      return "v2.1 Normalized Format (current)";
+      return "v2.1 Normalized Format (upgrade required)";
+    case "v2.2":
+      return "v2.2 Normalized Format (current)";
     case "v1.x-nested":
       return "v1.x Nested Format (legacy)";
     case "nightingale-raw":

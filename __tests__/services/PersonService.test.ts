@@ -36,7 +36,7 @@ describe("PersonService", () => {
     });
 
     return {
-      version: "2.1",
+      version: "2.2",
       people: [caseItem.person],
       cases: [caseItem],
       financials: [],

@@ -221,7 +221,7 @@ export class CategoryConfigService {
     const currentData = await this.fileStorage.readFileData();
 
     const baseData: NormalizedFileData = currentData ?? {
-      version: "2.1",
+      version: "2.2",
       people: [],
       cases: [],
       financials: [],

@@ -73,6 +73,36 @@ export interface RuntimeNormalizedFileDataV21 {
   templates?: Template[];
 }
 
+export interface PersistedNormalizedFileDataV22 {
+  version: "2.2";
+  people: StoredPerson[];
+  cases: PersistedCase[];
+  applications?: Application[];
+  financials: StoredFinancialItem[];
+  notes: StoredNote[];
+  alerts: AlertRecord[];
+  exported_at: string;
+  total_cases: number;
+  categoryConfig: CategoryConfig;
+  activityLog: CaseActivityEntry[];
+  templates?: Template[];
+}
+
+export interface RuntimeNormalizedFileDataV22 {
+  version: "2.2";
+  people: Person[];
+  cases: StoredCase[];
+  applications?: Application[];
+  financials: StoredFinancialItem[];
+  notes: StoredNote[];
+  alerts: AlertRecord[];
+  exported_at: string;
+  total_cases: number;
+  categoryConfig: CategoryConfig;
+  activityLog: CaseActivityEntry[];
+  templates?: Template[];
+}
+
 function cloneApplicationStatusHistory(
   statusHistory: Application["statusHistory"],
 ): Application["statusHistory"] {
@@ -171,6 +201,16 @@ export function isPersistedNormalizedFileDataV21(data: unknown): data is Persist
 
   return (
     candidate?.version === "2.1" &&
+    Array.isArray(candidate.people) &&
+    hasNormalizedCollectionsAndMetadata(candidate)
+  );
+}
+
+export function isPersistedNormalizedFileDataV22(data: unknown): data is PersistedNormalizedFileDataV22 {
+  const candidate = toNormalizedDataShapeCandidate(data);
+
+  return (
+    candidate?.version === "2.2" &&
     Array.isArray(candidate.people) &&
     hasNormalizedCollectionsAndMetadata(candidate)
   );
@@ -649,7 +689,7 @@ function syncApplicationWithCase(
   syncMode: RuntimeApplicationSyncMode = "full",
 ): { application: Application; hasChanged: boolean } {
   const sourceCaseRecord = createApplicationSourceCase(caseItem);
-  const nextStatus = sourceCaseRecord.status as Application["status"];
+  const nextStatus = sourceCaseRecord.status;
 
   if (!existingApplication) {
     return {
@@ -769,7 +809,7 @@ function shouldSkipApplicationSync(
 }
 
 export function syncRuntimeApplications(
-  data: RuntimeNormalizedFileDataV21,
+  data: RuntimeNormalizedFileDataV22,
   optionsOrPreferRuntimeCaseFields: boolean | SyncRuntimeApplicationsOptions = false,
 ): { applications: Application[]; hasChanged: boolean } {
   const {
@@ -911,15 +951,15 @@ export function dehydrateStoredCase(caseItem: StoredCase): PersistedCase {
   };
 }
 
-export function hydrateNormalizedData(
-  data: PersistedNormalizedFileDataV21,
-): RuntimeNormalizedFileDataV21 {
+function hydratePersistedNormalizedData(
+  data: PersistedNormalizedFileDataV21 | PersistedNormalizedFileDataV22,
+): RuntimeNormalizedFileDataV22 {
   const people = data.people.map((person) => toRuntimePerson(person, data.people));
   const applications = data.applications?.map(normalizePersistedApplication) ?? [];
   const completionStatuses = getCompletionStatusNames(data.categoryConfig);
 
   return {
-    version: "2.1",
+    version: "2.2",
     people,
     cases: data.cases.map((caseItem) =>
       hydrateStoredCase(
@@ -946,9 +986,8 @@ export function hydrateNormalizedData(
 }
 
 export function dehydrateNormalizedData(
-  data: RuntimeNormalizedFileDataV21,
-): PersistedNormalizedFileDataV21 {
-  const { applications } = syncRuntimeApplications(data);
+  data: RuntimeNormalizedFileDataV22,
+): PersistedNormalizedFileDataV22 {
   const peopleRegistry = new Map<string, Person>();
 
   for (const person of data.people) {
@@ -966,10 +1005,10 @@ export function dehydrateNormalizedData(
   const persistedPeople = people.map((person) => toStoredPerson(person, people));
 
   return {
-    version: "2.1",
+    version: "2.2",
     people: persistedPeople,
     cases: data.cases.map((caseItem) => dehydrateStoredCase(caseItem)),
-    applications: applications.map(normalizePersistedApplication),
+    applications: (data.applications ?? []).map(normalizePersistedApplication),
     financials: data.financials.map((financial) => ({ ...financial })),
     notes: data.notes.map((note) => ({ ...note })),
     alerts: data.alerts.map((alert) => ({ ...alert })),
@@ -979,6 +1018,18 @@ export function dehydrateNormalizedData(
     activityLog: data.activityLog.map((entry) => ({ ...entry })),
     templates: data.templates ? [...data.templates] : undefined,
   };
+}
+
+export function hydrateNormalizedData(
+  data: PersistedNormalizedFileDataV22,
+): RuntimeNormalizedFileDataV22 {
+  return hydratePersistedNormalizedData(data);
+}
+
+export function hydratePersistedNormalizedDataV21ForUpgrade(
+  data: PersistedNormalizedFileDataV21,
+): RuntimeNormalizedFileDataV22 {
+  return hydratePersistedNormalizedData(data);
 }
 
 function migrateRelationship(
@@ -1115,6 +1166,34 @@ export function migrateV20ToV21(data: NormalizedFileDataV20): PersistedNormalize
         isPendingArchival: caseItem.isPendingArchival,
       };
     }),
+    applications: data.cases.map((caseItem) => {
+      const migratedPersonId = casePersonIds.get(caseItem.id);
+      if (!migratedPersonId) {
+        throw new Error(`Missing migrated person ID for case ${caseItem.id}`);
+      }
+
+      return createMigratedApplication({
+        applicationId: uuidv4(),
+        initialHistoryId: uuidv4(),
+        caseId: caseItem.id,
+        applicantPersonId: migratedPersonId,
+        migratedAt: caseItem.updatedAt || caseItem.createdAt || data.exported_at,
+        caseRecord: {
+          ...caseItem.caseRecord,
+          id: caseItem.id,
+          personId: migratedPersonId,
+          intakeCompleted: resolveCaseRecordIntakeCompleted(
+            caseItem.caseRecord.intakeCompleted,
+          ),
+          financials: {
+            resources: [],
+            income: [],
+            expenses: [],
+          },
+          notes: [],
+        },
+      });
+    }),
     financials: data.financials.map((financial) => ({ ...financial })),
     notes: data.notes.map((note) => ({ ...note })),
     alerts: data.alerts.map((alert) => ({ ...alert })),
@@ -1124,4 +1203,20 @@ export function migrateV20ToV21(data: NormalizedFileDataV20): PersistedNormalize
     activityLog: data.activityLog.map((entry) => ({ ...entry })),
     templates: data.templates ? [...data.templates] : undefined,
   };
+}
+
+export function migrateV21ToV22(
+  data: PersistedNormalizedFileDataV21,
+): PersistedNormalizedFileDataV22 {
+  const hydratedData = hydratePersistedNormalizedDataV21ForUpgrade(data);
+  const syncedData = syncRuntimeApplications(hydratedData, {
+    preferRuntimeCaseFields: true,
+    syncMode: "full",
+    transactionTimestamp: data.exported_at,
+  });
+
+  return dehydrateNormalizedData({
+    ...hydratedData,
+    applications: syncedData.applications,
+  });
 }

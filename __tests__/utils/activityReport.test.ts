@@ -6,6 +6,7 @@ import {
 } from "@/utils/activityReport";
 import type {
   CaseActivityEntry,
+  CaseApplicationStatusChangeActivity,
   DailyActivityReport,
   DailyCaseActivityBreakdown,
 } from "../../types/activityLog";
@@ -193,7 +194,7 @@ describe("generateDailyActivityReport", () => {
       },
     };
 
-    const applicationStatusChangeEntry: CaseActivityEntry = {
+    const applicationStatusChangeEntry: CaseApplicationStatusChangeActivity = {
       id: "application-status-change-1",
       timestamp: "2025-10-05T11:00:00.000Z",
       caseId: "case-2",
@@ -203,7 +204,7 @@ describe("generateDailyActivityReport", () => {
       payload: {
         applicationId: "app-2",
         fromStatus: "Pending",
-        toStatus: "Approved",
+        toStatus: "Closed",
         effectiveDate: "2025-10-05",
         source: "user",
       },

@@ -268,18 +268,18 @@ describe("ApplicationService", () => {
     // Act
     const result = await service.addStatusHistory("case-1", "application-1", {
       id: "history-2",
-      status: "Approved",
+      status: "Closed",
       effectiveDate: "2026-02-01",
       changedAt: "2026-02-01T00:00:00.000Z",
       source: "user",
     });
 
     // Assert
-    expect(result.status).toBe("Approved");
+    expect(result.status).toBe("Closed");
     expect(result.statusHistory).toHaveLength(initialApplication.statusHistory.length + 1);
     expect(result.statusHistory[1]).toMatchObject({
       id: "history-2",
-      status: "Approved",
+      status: "Closed",
     });
     expect(mockFileStorage.writeNormalizedData).toHaveBeenCalledTimes(1);
     const writtenData = mockFileStorage.writeNormalizedData.mock.calls[0][0];
@@ -290,7 +290,7 @@ describe("ApplicationService", () => {
       payload: {
         applicationId: "application-1",
         fromStatus: "Pending",
-        toStatus: "Approved",
+        toStatus: "Closed",
         effectiveDate: "2026-02-01",
         source: "user",
       },
@@ -305,7 +305,7 @@ describe("ApplicationService", () => {
     await expectConsistentTransactionTimestamp(async () => {
       await service.addStatusHistory("case-1", "application-1", {
         id: "history-2",
-        status: "Approved",
+        status: "Closed",
         effectiveDate: "2026-04-08",
         changedAt: TEST_TRANSACTION_TIMESTAMP,
         source: "user",
@@ -323,7 +323,7 @@ describe("ApplicationService", () => {
     await expect(
       service.addStatusHistory("case-1", "application-1", {
         id: "history-2",
-        status: "Approved",
+        status: "Closed",
         effectiveDate: "2026-02-01",
         changedAt: "2026-02-01T00:00:00.000Z",
         source: "user",

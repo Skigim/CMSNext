@@ -59,6 +59,32 @@ export interface CreateMigratedApplicationInput {
   caseRecord: CaseRecord;
 }
 
+export interface CreateCanonicalApplicationInput {
+  applicationId: string;
+  initialHistoryId: string;
+  caseId: string;
+  applicantPersonId: string;
+  createdAt: string;
+  caseRecord: CanonicalApplicationCaseRecord;
+}
+
+type CanonicalApplicationCaseRecord = Pick<
+  CaseRecord,
+  | "applicationDate"
+  | "applicationType"
+  | "withWaiver"
+  | "retroRequested"
+  | "appValidated"
+  | "retroMonths"
+  | "agedDisabledVerified"
+  | "citizenshipVerified"
+  | "residencyVerified"
+  | "avsConsentDate"
+  | "voterFormStatus"
+  | "intakeCompleted"
+  | "status"
+>;
+
 export function deriveMigratedApplicationStatus(
   caseRecord: Pick<CaseRecord, "status">,
 ): MigratedApplicationStatusDecision {
@@ -78,7 +104,7 @@ export function normalizeRetroRequestedAt(
 }
 
 export function pickApplicationOwnedCaseRecordFields(
-  caseRecord: CaseRecord,
+  caseRecord: CanonicalApplicationCaseRecord,
 ): ApplicationOwnedCaseRecordSnapshot {
   return {
     applicationDate: caseRecord.applicationDate,
@@ -158,5 +184,46 @@ export function createMigratedApplication(
     },
     createdAt: input.migratedAt,
     updatedAt: input.migratedAt,
+  };
+}
+
+export function createCanonicalApplication(
+  input: CreateCanonicalApplicationInput,
+): Application {
+  const applicationFields = pickApplicationOwnedCaseRecordFields(input.caseRecord);
+  const status = input.caseRecord.status;
+
+  return {
+    id: input.applicationId,
+    caseId: input.caseId,
+    applicantPersonId: input.applicantPersonId,
+    applicationDate: applicationFields.applicationDate,
+    applicationType: applicationFields.applicationType,
+    status,
+    statusHistory: [
+      {
+        id: input.initialHistoryId,
+        status,
+        effectiveDate: applicationFields.applicationDate,
+        changedAt: input.createdAt,
+        source: "user",
+      },
+    ],
+    hasWaiver: applicationFields.hasWaiver,
+    retroRequestedAt: normalizeRetroRequestedAt(
+      applicationFields.retroRequested,
+    ),
+    retroMonths: [...applicationFields.retroMonths],
+    verification: {
+      isAppValidated: applicationFields.appValidated,
+      isAgedDisabledVerified: applicationFields.agedDisabledVerified,
+      isCitizenshipVerified: applicationFields.citizenshipVerified,
+      isResidencyVerified: applicationFields.residencyVerified,
+      avsConsentDate: applicationFields.avsConsentDate,
+      voterFormStatus: applicationFields.voterFormStatus,
+      isIntakeCompleted: applicationFields.intakeCompleted,
+    },
+    createdAt: input.createdAt,
+    updatedAt: input.createdAt,
   };
 }
