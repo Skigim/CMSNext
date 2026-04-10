@@ -9,7 +9,8 @@ AI instruction files and Git workflow tools for CMSNext.
 | `copilot-instructions.md`        | Master AI instruction file (architecture)                                                                            |
 | `instructions/*.instructions.md` | Path-scoped Copilot instructions for implementation, frontend, and tests                                             |
 | `agents/*.agent.md`              | Focused custom agents for triage, audit, frontend, domain, hooks, services, storage, documentation, and testing work |
-| `skills/*/SKILL.md`              | On-demand skills for repo memory and delegation workflows                                                            |
+| `skills/*/SKILL.md`              | Workspace-native CMSNext-owned skills for repo memory and delegation workflows                                       |
+| `../skills/*/SKILL.md`           | Vendored upstream Superpowers skills kept repo-local for reliability when plugin discovery is inconsistent           |
 | `implementation-guide.md`        | Services, domain, hooks, data flow                                                                                   |
 | `ui-guide.md`                    | React components, shadcn/ui, Tailwind                                                                                |
 | `testing-guide.md`               | Vitest, RTL, mocking patterns                                                                                        |
@@ -26,7 +27,8 @@ AI instruction files and Git workflow tools for CMSNext.
 - `copilot-instructions.md` is the single workspace-wide instruction entry point for this repo. Do not add `AGENTS.md` alongside it.
 - `instructions/*.instructions.md` provide path-scoped or task-scoped guidance and should include a keyword-rich `description` in frontmatter.
 - `agents/*.agent.md` are reserved for focused personas with explicit tool scopes, including the documentation and registry specialist.
-- `skills/*/SKILL.md` are reserved for repeatable on-demand workflows and reference material that should not be modeled as agents.
+- `.github/skills/*/SKILL.md` are reserved for repeatable CMSNext-owned on-demand workflows and reference material that should not be modeled as agents.
+- `../skills/*/SKILL.md` is the vendored upstream Superpowers tree. It is kept outside `.github/skills/` so it can stay aligned with upstream while still being referenced directly by repo instructions and hooks as a reliability fallback.
 - `copilot-instructions.md` also defines when the default agent should automatically delegate to `audit`, `frontend`, `domain`, `hooks`, `services`, `storage`, `documentation`, `testing`, or `Explore` based on task type.
 
 ## Git Workflow

@@ -74,9 +74,12 @@ When starting a task, prefer this order:
 ### Superpowers Skill Overlay
 
 - CMSNext vendors the upstream Superpowers skill library under `skills/` in this repository.
+- CMSNext keeps that vendored tree because plugin-based Superpowers discovery has been unreliable in practice; the repository relies on direct repo-local skill paths as the deterministic fallback.
+- The vendored `skills/` tree is intentionally used by repo instructions and startup hooks, while `.github/skills/` remains the native workspace-discoverable location for CMSNext-owned skills.
 - `skills/using-superpowers/SKILL.md` is the mandatory first skill reference for every CMSNext task.
 - The centralized skill-selection workflow lives in `.github/skills/skill-governance/SKILL.md`.
 - CMSNext assumes the Obra Superpowers plugin is installed and available for advanced workflow skills.
+- Treat the plugin as a preferred overlay when it is working correctly, not as the only reliable way to access required Superpowers workflow guidance in this repository.
 - After loading `skills/using-superpowers/SKILL.md`, the agent must load `repo-memories` before any repo-specific thought or action.
 - After loading `repo-memories`, the agent must load `skill-governance` before taking any non-startup action.
 - If `skill-governance` selects a more specific applicable skill, the agent must load and invoke it for that action rather than merely noting that it exists.

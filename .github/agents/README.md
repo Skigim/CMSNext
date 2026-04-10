@@ -2,6 +2,8 @@
 
 This directory contains focused custom agent definitions for delegating bounded work to Copilot subagents. The `triage` agent acts as the CMSNext manager and routes work to the right specialist, repo-specific CMSNext skills under `.github/skills/`, or vendored upstream Superpowers skills under `skills/` through explicit handoffs in VS Code chat. Use `.github/skills/` for CMSNext-owned workflow overlays such as `.github/skills/repo-memories/SKILL.md` and `.github/skills/skill-governance/SKILL.md`, and use `skills/` for vendored upstream Superpowers content that should stay aligned with the external source.
 
+The repo intentionally keeps the upstream Superpowers tree under `skills/` because plugin discovery has been unreliable in practice. That vendored tree is not just archival; CMSNext instructions and startup hooks directly require repo-local reads from it so skill loading still works when plugin discovery is inconsistent.
+
 ## Usage
 
 When dispatching a subagent, reference the relevant agent definition for the target domain.
@@ -15,6 +17,8 @@ The default workspace agent is also instructed through `.github/copilot-instruct
 ## Superpowers Overlay
 
 When the active harness exposes installed Superpowers skills, use them as a process overlay on top of these CMSNext agents rather than as a replacement for them.
+
+The installed plugin is helpful, but CMSNext does not rely on it as the sole discovery path. Repo-local references to `skills/.../SKILL.md` are the reliability fallback and should be treated as part of the intended workflow, not as a temporary workaround to ignore.
 
 - Start with `skills/using-superpowers/SKILL.md`, then immediately load `repo-memories`, then load `.github/skills/skill-governance/SKILL.md` to choose the next applicable skill before any other action.
 - If a relevant Superpowers skill is available, load and invoke it rather than treating the check as optional.
