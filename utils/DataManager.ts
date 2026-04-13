@@ -1440,11 +1440,11 @@ export class DataManager {
   /**
    * Write normalized data to file system.
    * 
-  * This method writes data through the canonical v2.2 persistence path after
+    * This method writes data through the canonical v2.2 persistence path after
    * dehydrating runtime-only case fields.
    * 
-  * **Warning:** This method bypasses normal service operations and should
-  * only be used for tightly-scoped internal persistence work.
+    * **Warning:** This method bypasses normal service operations and should
+    * only be used for tightly-scoped internal persistence work.
    * 
    * @param {NormalizedFileData} data - The normalized data to write
    * @returns {Promise<NormalizedFileData>} The written data after enrichment

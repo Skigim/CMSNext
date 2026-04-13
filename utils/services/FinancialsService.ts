@@ -188,7 +188,7 @@ export class FinancialsService {
    *   amount: 500,
    *   frequency: "monthly",
    *   verified: true
-   * );
+    * });
    * // Auto-creates amount history entry starting from current month
    */
   async addItem(

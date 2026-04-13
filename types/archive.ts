@@ -32,6 +32,7 @@ export const ARCHIVE_VERSION = "2.2" as const;
  *   archivedAt: "2026-01-22T10:30:00.000Z",
  *   archiveYear: 2025,
  *   cases: [...],
+ *   applications: [...],
  *   financials: [...],
  *   notes: [...]
  * }

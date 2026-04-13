@@ -261,6 +261,7 @@ interface FileStorageServiceConfig {
  *   version: "2.2",
  *   people: Person[],                 // Global people registry
  *   cases: StoredCase[],              // Runtime-hydrated cases
+ *   applications?: Application[],     // Canonical application records by caseId
  *   financials: StoredFinancialItem[], // Foreign key: caseId
  *   notes: StoredNote[],               // Foreign key: caseId
  *   alerts: AlertRecord[],             // Flat array

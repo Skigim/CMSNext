@@ -49,7 +49,6 @@ interface DataManagerProviderProps {
  * ## Lifecycle
  * 
  * - Waits for FileStorage to connect before creating DataManager
- * - Runs financial history migration once on first connection
  * - Cleans up on unmount
  * 
  * ## Setup

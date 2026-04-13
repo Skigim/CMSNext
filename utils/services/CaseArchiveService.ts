@@ -45,6 +45,7 @@ import {
   buildPersistedArchiveDataV22,
   hydratePersistedArchiveDataV22,
   isPersistedCaseArchiveDataV22,
+  normalizePersistedApplication,
 } from "../persistedV22Storage";
 import { LegacyFormatError } from "./FileStorageService";
 
@@ -438,12 +439,7 @@ export class CaseArchiveService {
 
     return (applications ?? [])
       .filter((application) => caseIdSet.has(application.caseId))
-      .map((application) => ({
-        ...application,
-        retroMonths: [...application.retroMonths],
-        statusHistory: application.statusHistory.map((entry) => ({ ...entry })),
-        verification: { ...application.verification },
-      }));
+      .map(normalizePersistedApplication);
   }
 
   /**
