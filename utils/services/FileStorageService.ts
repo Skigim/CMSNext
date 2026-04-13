@@ -13,7 +13,6 @@ import type { Template } from "@/types/template";
 import { getCompletionStatusNames, mergeCategoryConfig } from "@/types/categoryConfig";
 import { selectOldestNonTerminalApplication } from "@/domain/applications";
 import { discoverStatusesFromCases, discoverAlertTypesFromAlerts } from "../categoryConfigMigration";
-import { migrateFinancialItems, hasItemsNeedingMigration } from "../financialItemMigration";
 import AutosaveFileService from "../AutosaveFileService";
 import { createLogger } from "../logger";
 import { reportFileStorageError, type FileStorageOperation } from "../fileStorageErrorReporter";
@@ -239,7 +238,6 @@ interface FileStorageServiceConfig {
  * ### Read Operations
  * - Returns NormalizedFileData or creates empty structure
  * - Validates format version
- * - Provides raw data access for migration utilities
  * - Handles missing files gracefully
  * 
  * ### Write Operations
@@ -254,15 +252,16 @@ interface FileStorageServiceConfig {
  * - Timestamp updates for modified cases
  * - Data access helpers for normalized format
  * 
- * ## Data Format (v2.1 Normalized)
+ * ## Data Format (v2.2 Normalized)
  * 
  * The service enforces a normalized data structure:
  * 
  * ```typescript
  * {
- *   version: "2.1",
+ *   version: "2.2",
  *   people: Person[],                 // Global people registry
  *   cases: StoredCase[],              // Runtime-hydrated cases
+ *   applications?: Application[],     // Canonical application records by caseId
  *   financials: StoredFinancialItem[], // Foreign key: caseId
  *   notes: StoredNote[],               // Foreign key: caseId
  *   alerts: AlertRecord[],             // Flat array
@@ -379,44 +378,12 @@ export class FileStorageService {
     }
   }
 
-  /**
-   * Read raw data from file system without format validation.
-   * 
- * This method bypasses format validation and returns the raw persisted file contents.
-   * **Only for use by migration utilities** that need to read legacy formats.
-   * 
- * Normal application code should use readFileData() which enforces v2.2 format.
- *
-   * @returns {Promise<unknown>} Raw file data or null if no file exists
-   * @throws {Error} If file read fails
-   */
-  async readRawFileData(): Promise<unknown> {
-    try {
-      const rawData = await this.fileService.readFile();
-      return rawData;
-    } catch (error) {
-      logger.error("Failed to read raw file data", {
-        error: error instanceof Error ? error.message : "Unknown error",
-      });
-      throw error;
-    }
-  }
-
   private async readCanonicalNormalizedData(
     rawData: PersistedNormalizedFileDataV22,
   ): Promise<NormalizedFileData> {
     logger.debug("Detected normalized data format (v2.2)");
 
-    const hydratedData = this.hydratePersistedRuntimeData(rawData);
-    const { normalizedData, hasFinancialMigration } = this.applyFinancialMigration(
-      hydratedData,
-    );
-
-    if (hasFinancialMigration) {
-      return await this.writeNormalizedData(normalizedData);
-    }
-
-    return normalizedData;
+    return this.hydratePersistedRuntimeData(rawData);
   }
 
   private hydratePersistedRuntimeData(
@@ -434,26 +401,6 @@ export class FileStorageService {
           : "unknown hydration error";
       throw new LegacyFormatError(`${INVALID_V2_2_FORMAT_PREFIX}: ${hydrationError}`);
     }
-  }
-
-  private applyFinancialMigration(
-    data: NormalizedFileData,
-  ): { normalizedData: NormalizedFileData; hasFinancialMigration: boolean } {
-    const hasFinancialMigration = hasItemsNeedingMigration(data.financials);
-    if (!hasFinancialMigration) {
-      return { normalizedData: data, hasFinancialMigration };
-    }
-
-    const [migratedFinancials, count] = migrateFinancialItems(data.financials);
-    logger.info(`Migrated ${count} financial items to include history entries`);
-
-    return {
-      normalizedData: {
-        ...data,
-        financials: migratedFinancials,
-      },
-      hasFinancialMigration,
-    };
   }
 
   /**

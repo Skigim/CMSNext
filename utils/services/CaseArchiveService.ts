@@ -13,6 +13,7 @@
  * @module utils/services/CaseArchiveService
  */
 
+import type { Application } from "@/types/application";
 import type { StoredCase } from "../../types/case";
 import type { 
   ArchiveFileInfo,
@@ -44,6 +45,7 @@ import {
   buildPersistedArchiveDataV22,
   hydratePersistedArchiveDataV22,
   isPersistedCaseArchiveDataV22,
+  normalizePersistedApplication,
 } from "../persistedV22Storage";
 import { LegacyFormatError } from "./FileStorageService";
 
@@ -118,6 +120,7 @@ export interface RefreshQueueResult {
  *   archiveType: "cases",
  *   people: [...],
  *   cases: [...],
+ *   applications: [...],
  *   financials: [...],
  *   notes: [...],
  *   alerts: [],
@@ -362,6 +365,10 @@ export class CaseArchiveService {
       currentData.financials,
       currentData.notes
     );
+    const relatedApplications = this.collectArchiveApplications(
+      archivedCaseIds,
+      currentData.applications,
+    );
 
     // Determine archive file for current year
     const archiveYear = new Date().getFullYear();
@@ -380,6 +387,7 @@ export class CaseArchiveService {
     const mergedArchive = mergeArchiveData(
       existingArchive.normalizedArchive,
       cleanedCases,
+      relatedApplications,
       related.financials,
       related.notes,
       archiveYear
@@ -395,6 +403,9 @@ export class CaseArchiveService {
     const updatedData: NormalizedFileData = {
       ...currentData,
       cases: currentData.cases.filter(c => !caseIdSet.has(c.id)),
+      applications: (currentData.applications ?? []).filter(
+        (application) => !caseIdSet.has(application.caseId),
+      ),
       financials: currentData.financials.filter(f => !caseIdSet.has(f.caseId)),
       notes: currentData.notes.filter(n => !caseIdSet.has(n.caseId)),
     };
@@ -418,6 +429,17 @@ export class CaseArchiveService {
       archiveFileName,
       archivedCaseIds,
     };
+  }
+
+  private collectArchiveApplications(
+    caseIds: string[],
+    applications: Application[] | undefined,
+  ): Application[] {
+    const caseIdSet = new Set(caseIds);
+
+    return (applications ?? [])
+      .filter((application) => caseIdSet.has(application.caseId))
+      .map(normalizePersistedApplication);
   }
 
   /**
@@ -569,6 +591,9 @@ export class CaseArchiveService {
     // Collect related financials and notes from archive
     const restoredCaseIds = casesToRestore.map(c => c.id);
     const related = collectRelatedData(restoredCaseIds, archive.financials, archive.notes);
+    const archivedApplications = archive.applications.filter((application) =>
+      caseIdSet.has(application.caseId),
+    );
 
     // Load current main data
     const currentData = await this.fileStorage.readFileData();
@@ -577,13 +602,18 @@ export class CaseArchiveService {
     }
 
     // Deduplicate and merge into main file
-    const { newCases, newFinancials, newNotes } = this.deduplicateForRestore(
-      casesToRestore, related.financials, related.notes, currentData
+    const { newCases, newApplications, newFinancials, newNotes } = this.deduplicateForRestore(
+      casesToRestore,
+      archivedApplications,
+      related.financials,
+      related.notes,
+      currentData
     );
 
     const updatedData: NormalizedFileData = {
       ...currentData,
       cases: [...currentData.cases, ...newCases],
+      applications: [...(currentData.applications ?? []), ...newApplications],
       financials: [...currentData.financials, ...newFinancials],
       notes: [...currentData.notes, ...newNotes],
     };
@@ -617,16 +647,23 @@ export class CaseArchiveService {
    */
   private deduplicateForRestore(
     casesToRestore: StoredCase[],
+    applications: Application[],
     financials: NormalizedFileData['financials'],
     notes: NormalizedFileData['notes'],
     currentData: NormalizedFileData
   ) {
     const existingCaseIds = new Set(currentData.cases.map(c => c.id));
+    const existingApplicationIds = new Set(
+      (currentData.applications ?? []).map((application) => application.id),
+    );
     const existingFinancialIds = new Set(currentData.financials.map(f => f.id));
     const existingNoteIds = new Set(currentData.notes.map(n => n.id));
 
     return {
       newCases: casesToRestore.filter(c => !existingCaseIds.has(c.id)),
+      newApplications: applications.filter(
+        (application) => !existingApplicationIds.has(application.id),
+      ),
       newFinancials: financials.filter(f => !existingFinancialIds.has(f.id)),
       newNotes: notes.filter(n => !existingNoteIds.has(n.id)),
     };
@@ -648,6 +685,7 @@ export class CaseArchiveService {
         ...archive,
         archivedAt: new Date().toISOString(),
         cases: [],
+        applications: [],
         financials: [],
         notes: [],
       };
@@ -690,12 +728,12 @@ export class CaseArchiveService {
   }
 
   private normalizeArchiveData(data: unknown): CaseArchiveData | null {
-    if (isCaseArchiveData(data)) {
-      return data;
-    }
-
     if (isPersistedCaseArchiveDataV22(data)) {
       return hydratePersistedArchiveDataV22(data);
+    }
+
+    if (isCaseArchiveData(data)) {
+      return data;
     }
 
     const candidate = data as Record<string, unknown> | null;

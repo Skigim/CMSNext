@@ -177,16 +177,10 @@ function convertToAlertWithMatch(record: AlertRecord): AlertWithMatch {
  *   'resources',
  *   { name: "SNAP", amount: 500, ... }
  * );
- * 
- * // Updating case status
- * await dataManager.updateCaseStatus(newCase.id, "Closed");
  * ```
- * 
- * @class DataManager
- * @see {@link FileStorageService} for low-level file operations
- * @see {@link CaseService} for case-specific operations
  */
 export class DataManager {
+
   /** File service instance for file system operations and autosave */
   private readonly fileService: AutosaveFileService;
   /** File storage service for low-level I/O operations */
@@ -1444,52 +1438,19 @@ export class DataManager {
   }
 
   /**
-   * Read raw file data without format validation.
-   * 
-   * This method bypasses normal validation and returns the raw file contents.
-   * Used by migration utilities that need to read legacy formats.
-   * 
-   * **Warning:** This method should only be used by migration tools.
-   * Normal application code should use the standard read methods.
-   * 
-   * @returns {Promise<unknown>} Raw file data or null if no file exists
-   */
-  async readRawFileData(): Promise<unknown> {
-    return this.fileStorage.readRawFileData();
-  }
-
-  /**
    * Write normalized data to file system.
    * 
-  * This method writes data through the canonical v2.2 persistence path after
+    * This method writes data through the canonical v2.2 persistence path after
    * dehydrating runtime-only case fields.
    * 
-   * **Warning:** This method bypasses normal service operations and should
-   * only be used by migration tools.
+    * **Warning:** This method bypasses normal service operations and should
+    * only be used for tightly-scoped internal persistence work.
    * 
    * @param {NormalizedFileData} data - The normalized data to write
    * @returns {Promise<NormalizedFileData>} The written data after enrichment
    */
   async writeNormalizedData(data: NormalizedFileData): Promise<NormalizedFileData> {
     return this.fileStorage.writeNormalizedData(this.dehydrateCaseData(data));
-  }
-
-  /**
-   * Migrate financial items that don't have amount history.
-   * 
-   * This migration creates a history entry from the item's dateAdded/createdAt
-   * field for backward compatibility with older data formats.
-   * 
-   * Run this once after upgrading from a version that didn't support
-   * amount history.
-   * 
-   * @returns {Promise<number>} Number of items migrated
-   * @example
-   * const migrated = await dataManager.migrateFinancialsWithoutHistory();
-   * console.log(`Migrated ${migrated} financial items`);
-   */
-  async migrateFinancialsWithoutHistory(): Promise<number> {
-    return this.financials.migrateItemsWithoutHistory();
   }
 
   // =============================================================================

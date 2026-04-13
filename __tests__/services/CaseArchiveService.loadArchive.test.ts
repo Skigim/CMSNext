@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { createMockPerson, createMockStoredCase } from "@/src/test/testUtils";
+import { createMockApplication, createMockPerson, createMockStoredCase } from "@/src/test/testUtils";
 import { mergeCategoryConfig } from "@/types/categoryConfig";
 import { dehydrateNormalizedData } from "@/utils/persistedV22Storage";
 import { LegacyFormatError } from "@/utils/services/FileStorageService";
@@ -18,13 +18,18 @@ function createPersistedArchiveDataV22() {
     person,
     people: [{ personId: person.id, role: "applicant", isPrimary: true }],
   });
+  const application = createMockApplication({
+    id: "archive-application-1",
+    caseId: caseItem.id,
+    applicantPersonId: person.id,
+  });
 
   return {
     ...dehydrateNormalizedData({
       version: "2.2" as const,
       people: [person],
       cases: [caseItem],
-      applications: [],
+      applications: [application],
       financials: [],
       notes: [],
       alerts: [],
@@ -83,6 +88,7 @@ describe("CaseArchiveService.loadArchivedCases", () => {
       archiveType: "cases",
       archiveYear: 2026,
       cases: [expect.objectContaining({ id: "archive-case-1" })],
+      applications: [expect.objectContaining({ id: "archive-application-1" })],
     });
   });
 

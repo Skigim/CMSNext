@@ -13,8 +13,8 @@ import {
 import type { CaseArchiveData } from "@/types/archive";
 
 describe("ARCHIVE_VERSION", () => {
-  it("should be version 1.0", () => {
-    expect(ARCHIVE_VERSION).toBe("1.0");
+  it("should be version 2.2", () => {
+    expect(ARCHIVE_VERSION).toBe("2.2");
   });
 });
 
@@ -56,11 +56,12 @@ describe("parseArchiveYear", () => {
 describe("isCaseArchiveData", () => {
   it("should return true for valid archive data", () => {
     const validArchive: CaseArchiveData = {
-      version: "1.0",
+      version: "2.2",
       archiveType: "cases",
       archivedAt: new Date().toISOString(),
       archiveYear: 2025,
       cases: [],
+      applications: [],
       financials: [],
       notes: [],
     };
@@ -85,6 +86,7 @@ describe("isCaseArchiveData", () => {
       archivedAt: new Date().toISOString(),
       archiveYear: 2025,
       cases: [],
+      applications: [],
       financials: [],
       notes: [],
     };
@@ -94,11 +96,12 @@ describe("isCaseArchiveData", () => {
 
   it("should return false for wrong archiveType", () => {
     const wrongType = {
-      version: "1.0",
+      version: "2.2",
       archiveType: "other",
       archivedAt: new Date().toISOString(),
       archiveYear: 2025,
       cases: [],
+      applications: [],
       financials: [],
       notes: [],
     };
@@ -108,10 +111,11 @@ describe("isCaseArchiveData", () => {
 
   it("should return false for missing required fields", () => {
     const missingCases = {
-      version: "1.0",
+      version: "2.2",
       archiveType: "cases",
       archivedAt: new Date().toISOString(),
       archiveYear: 2025,
+      applications: [],
       financials: [],
       notes: [],
     };
@@ -121,11 +125,12 @@ describe("isCaseArchiveData", () => {
 
   it("should return false for non-array cases", () => {
     const nonArrayCases = {
-      version: "1.0",
+      version: "2.2",
       archiveType: "cases",
       archivedAt: new Date().toISOString(),
       archiveYear: 2025,
       cases: "not-an-array",
+      applications: [],
       financials: [],
       notes: [],
     };

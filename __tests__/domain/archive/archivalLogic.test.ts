@@ -15,6 +15,7 @@ import {
   mergeArchiveData,
   removeCasesFromArchive,
 } from "@/domain/archive/archivalLogic";
+import { createMockApplication } from "@/src/test/testUtils";
 import type { StoredCase, StoredFinancialItem, StoredNote } from "@/types/case";
 import type { CaseArchiveData, ArchivalSettings } from "@/types/archive";
 import { ARCHIVE_VERSION } from "@/types/archive";
@@ -326,15 +327,17 @@ describe("getCasesInArchivalQueue", () => {
 describe("mergeArchiveData", () => {
   it("should create new archive when existing is null", () => {
     const cases = [createTestCase({ id: "case-1" })];
+    const applications = [createMockApplication({ id: "application-1", caseId: "case-1" })];
     const financials = [createTestFinancial("case-1")];
     const notes = [createTestNote("case-1")];
     
-    const result = mergeArchiveData(null, cases, financials, notes, 2025);
+    const result = mergeArchiveData(null, cases, applications, financials, notes, 2025);
     
     expect(result.version).toBe(ARCHIVE_VERSION);
     expect(result.archiveType).toBe("cases");
     expect(result.archiveYear).toBe(2025);
     expect(result.cases).toHaveLength(1);
+    expect(result.applications).toHaveLength(1);
     expect(result.financials).toHaveLength(1);
     expect(result.notes).toHaveLength(1);
   });
@@ -346,17 +349,20 @@ describe("mergeArchiveData", () => {
       archivedAt: new Date().toISOString(),
       archiveYear: 2025,
       cases: [createTestCase({ id: "existing-case" })],
+      applications: [createMockApplication({ id: "application-existing", caseId: "existing-case" })],
       financials: [createTestFinancial("existing-case")],
       notes: [],
     };
     
     const newCases = [createTestCase({ id: "new-case" })];
+    const newApplications = [createMockApplication({ id: "application-new", caseId: "new-case" })];
     const newFinancials = [createTestFinancial("new-case")];
     const newNotes = [createTestNote("new-case")];
     
-    const result = mergeArchiveData(existingArchive, newCases, newFinancials, newNotes, 2025);
+    const result = mergeArchiveData(existingArchive, newCases, newApplications, newFinancials, newNotes, 2025);
     
     expect(result.cases).toHaveLength(2);
+    expect(result.applications).toHaveLength(2);
     expect(result.financials).toHaveLength(2);
     expect(result.notes).toHaveLength(1);
   });
@@ -369,14 +375,23 @@ describe("mergeArchiveData", () => {
       archivedAt: new Date().toISOString(),
       archiveYear: 2025,
       cases: [case1],
+      applications: [createMockApplication({ id: "application-1", caseId: "case-1" })],
       financials: [],
       notes: [],
     };
     
     // Try to add the same case again
-    const result = mergeArchiveData(existingArchive, [case1], [], [], 2025);
+    const result = mergeArchiveData(
+      existingArchive,
+      [case1],
+      [createMockApplication({ id: "application-1", caseId: "case-1" })],
+      [],
+      [],
+      2025,
+    );
     
     expect(result.cases).toHaveLength(1);
+    expect(result.applications).toHaveLength(1);
   });
 });
 
@@ -390,6 +405,10 @@ describe("removeCasesFromArchive", () => {
       cases: [
         createTestCase({ id: "case-1" }),
         createTestCase({ id: "case-2" }),
+      ],
+      applications: [
+        createMockApplication({ id: "application-1", caseId: "case-1" }),
+        createMockApplication({ id: "application-2", caseId: "case-2" }),
       ],
       financials: [
         createTestFinancial("case-1"),
@@ -406,6 +425,8 @@ describe("removeCasesFromArchive", () => {
     expect(result).not.toBeNull();
     expect(result!.cases).toHaveLength(1);
     expect(result!.cases[0].id).toBe("case-2");
+    expect(result!.applications).toHaveLength(1);
+    expect(result!.applications[0].caseId).toBe("case-2");
     expect(result!.financials).toHaveLength(1);
     expect(result!.notes).toHaveLength(1);
   });
@@ -417,6 +438,7 @@ describe("removeCasesFromArchive", () => {
       archivedAt: new Date().toISOString(),
       archiveYear: 2025,
       cases: [createTestCase({ id: "case-1" })],
+      applications: [createMockApplication({ id: "application-1", caseId: "case-1" })],
       financials: [],
       notes: [],
     };

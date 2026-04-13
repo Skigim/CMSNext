@@ -1,6 +1,5 @@
-import { useContext, createContext, ReactNode, useMemo, useEffect, useRef, useState } from 'react';
+import { useContext, createContext, ReactNode, useMemo, useEffect } from 'react';
 import { DataManager } from '@/utils/DataManager';
-import { useEncryption } from '@/contexts/EncryptionContext';
 import { useFileStorage } from '@/contexts/FileStorageContext';
 import { createLogger } from '@/utils/logger';
 
@@ -12,7 +11,7 @@ import { createLogger } from '@/utils/logger';
 interface DataManagerContextType {
   /** Instance of DataManager, or null if file service not connected */
   dataManager: DataManager | null;
-  /** Whether startup migration and initial workspace load have completed */
+  /** Whether initial workspace load has completed */
   isWorkspaceReady: boolean;
 }
 
@@ -50,7 +49,6 @@ interface DataManagerProviderProps {
  * ## Lifecycle
  * 
  * - Waits for FileStorage to connect before creating DataManager
- * - Runs financial history migration once on first connection
  * - Cleans up on unmount
  * 
  * ## Setup
@@ -85,12 +83,6 @@ interface DataManagerProviderProps {
  */
 export function DataManagerProvider({ children }: Readonly<DataManagerProviderProps>) {
   const { service, fileStorageService, isConnected, isWorkspaceReady, status } = useFileStorage();
-  const encryption = useEncryption();
-  const isMigrationCompleted = useRef(false);
-  const isMigrationInProgress = useRef(false);
-  const hasMigrationRetryScheduled = useRef(false);
-  const [migrationRetryKey, setMigrationRetryKey] = useState(0);
-  
   // Memoize DataManager creation to prevent recreation on every render
   const dataManager = useMemo(() => {
     if (!service) return null;
@@ -112,52 +104,6 @@ export function DataManagerProvider({ children }: Readonly<DataManagerProviderPr
       permissionStatus: status?.permissionStatus,
     });
   }, [dataManager, isConnected, service, status]);
-
-  // Run financial history migration once when connected
-  useEffect(() => {
-    if (
-      !dataManager ||
-      !isConnected ||
-      !isWorkspaceReady ||
-      isMigrationCompleted.current ||
-      isMigrationInProgress.current
-    ) return;
-    if (
-      encryption.isEncryptionEnabled &&
-      encryption.fileEncryptionStatus !== 'unencrypted' &&
-      !encryption.isStartupUnlockReady
-    ) {
-      logger.debug('Deferring financial migration until startup unlock is ready');
-      return;
-    }
-
-    isMigrationInProgress.current = true;
-    dataManager.migrateFinancialsWithoutHistory().then((count) => {
-      isMigrationCompleted.current = true;
-      if (count > 0) {
-        logger.info('Migrated financial items without history', { count });
-      }
-    }).catch((error) => {
-      logger.error('Failed to migrate financial items', { error });
-      // Retry once on a transient startup failure so the first rejected read
-      // does not suppress migration for the whole session, but avoid loops if
-      // the workspace is persistently unreadable.
-      if (!hasMigrationRetryScheduled.current) {
-        hasMigrationRetryScheduled.current = true;
-        setMigrationRetryKey((current) => current + 1);
-      }
-    }).finally(() => {
-      isMigrationInProgress.current = false;
-    });
-  }, [
-    dataManager,
-    encryption.fileEncryptionStatus,
-    encryption.isEncryptionEnabled,
-    encryption.isStartupUnlockReady,
-    isConnected,
-    isWorkspaceReady,
-    migrationRetryKey,
-  ]);
 
   const contextValue = useMemo(
     () => ({ dataManager, isWorkspaceReady }),

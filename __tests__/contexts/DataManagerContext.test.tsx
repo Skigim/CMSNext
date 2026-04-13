@@ -6,12 +6,8 @@ import {
   useDataManagerSafe,
 } from "@/contexts/DataManagerContext";
 
-const migrateFinancialsWithoutHistory = vi.fn<() => Promise<number>>();
-
 const mockDataManagerClass = vi.hoisted(() => vi.fn());
-let mockDataManagerInstance = {
-  migrateFinancialsWithoutHistory,
-};
+let mockDataManagerInstance = {};
 
 let mockFileStorageContext = {
   service: {
@@ -51,11 +47,8 @@ function TestChild({ children }: Readonly<{ children?: ReactNode }>) {
 
 describe("DataManagerContext", () => {
   beforeEach(() => {
-    migrateFinancialsWithoutHistory.mockReset();
     mockDataManagerClass.mockClear();
-    mockDataManagerInstance = {
-      migrateFinancialsWithoutHistory,
-    };
+    mockDataManagerInstance = {};
     mockDataManagerClass.mockImplementation(() => mockDataManagerInstance);
     mockFileStorageContext = {
       service: {
@@ -77,57 +70,8 @@ describe("DataManagerContext", () => {
     };
   });
 
-  it("retries startup financial migration after a transient first failure once unlock readiness is satisfied", async () => {
+  it("creates a DataManager without performing startup migration work", async () => {
     // ARRANGE
-    migrateFinancialsWithoutHistory
-      .mockRejectedValueOnce(new Error("temporary read failure"))
-      .mockResolvedValueOnce(0);
-
-    const { rerender } = render(
-      <DataManagerProvider>
-        <TestChild />
-      </DataManagerProvider>,
-    );
-
-    // ASSERT
-    expect(migrateFinancialsWithoutHistory).not.toHaveBeenCalled();
-
-    // ACT
-    mockEncryptionContext = {
-      ...mockEncryptionContext,
-      isStartupUnlockReady: true,
-    };
-    mockFileStorageContext = {
-      ...mockFileStorageContext,
-      isWorkspaceReady: true,
-    };
-    rerender(
-      <DataManagerProvider>
-        <TestChild />
-      </DataManagerProvider>,
-    );
-
-    // ASSERT
-    await waitFor(() => {
-      expect(migrateFinancialsWithoutHistory).toHaveBeenCalledTimes(2);
-    });
-
-    // ACT
-    rerender(
-      <DataManagerProvider>
-        <TestChild />
-      </DataManagerProvider>,
-    );
-
-    // ASSERT
-    await waitFor(() => {
-      expect(migrateFinancialsWithoutHistory).toHaveBeenCalledTimes(2);
-    });
-  });
-
-  it("does not block startup migration for unencrypted workspaces even when encryption mode is enabled", async () => {
-    // ARRANGE
-    migrateFinancialsWithoutHistory.mockResolvedValue(0);
     mockEncryptionContext = {
       isEncryptionEnabled: true,
       fileEncryptionStatus: "unencrypted",
@@ -148,11 +92,12 @@ describe("DataManagerContext", () => {
 
     // ASSERT
     await waitFor(() => {
-      expect(migrateFinancialsWithoutHistory).toHaveBeenCalledTimes(1);
+      expect(mockDataManagerClass).toHaveBeenCalledTimes(1);
     });
+    expect("migrateFinancialsWithoutHistory" in mockDataManagerInstance).toBe(false);
   });
 
-  it("defers startup migration while file encryption status is still unknown", () => {
+  it("still constructs a DataManager while encryption status is unknown", async () => {
     // ARRANGE
     mockEncryptionContext = {
       isEncryptionEnabled: true,
@@ -169,12 +114,13 @@ describe("DataManagerContext", () => {
     );
 
     // ASSERT
-    expect(migrateFinancialsWithoutHistory).not.toHaveBeenCalled();
+    await waitFor(() => {
+      expect(mockDataManagerClass).toHaveBeenCalledTimes(1);
+    });
   });
 
   it("keeps the safe DataManager unavailable until workspace startup is complete", async () => {
     // ARRANGE
-    migrateFinancialsWithoutHistory.mockResolvedValue(0);
     mockEncryptionContext = {
       ...mockEncryptionContext,
       isStartupUnlockReady: true,
@@ -194,7 +140,6 @@ describe("DataManagerContext", () => {
 
     // ASSERT
     expect(screen.getByTestId("availability").textContent).toBe("unavailable");
-    expect(migrateFinancialsWithoutHistory).not.toHaveBeenCalled();
 
     // ACT
     mockFileStorageContext = {
@@ -210,9 +155,6 @@ describe("DataManagerContext", () => {
     // ASSERT
     await waitFor(() => {
       expect(screen.getByTestId("availability").textContent).toBe("available");
-    });
-    await waitFor(() => {
-      expect(migrateFinancialsWithoutHistory).toHaveBeenCalledTimes(1);
     });
   });
 });

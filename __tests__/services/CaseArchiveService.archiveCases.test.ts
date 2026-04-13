@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { createMockPerson, createMockStoredCase } from "@/src/test/testUtils";
+import { createMockApplication, createMockPerson, createMockStoredCase } from "@/src/test/testUtils";
 import { mergeCategoryConfig } from "@/types/categoryConfig";
 import { dehydrateNormalizedData } from "@/utils/persistedV22Storage";
 import { CaseArchiveService } from "@/utils/services/CaseArchiveService";
@@ -35,13 +35,18 @@ function createArchivableCase(id: string) {
 
 function createPersistedArchiveDataV22() {
   const archivedCase = createArchivableCase("existing");
+  const archivedApplication = createMockApplication({
+    id: "application-existing",
+    caseId: archivedCase.id,
+    applicantPersonId: archivedCase.person.id,
+  });
 
   return {
     ...dehydrateNormalizedData({
       version: "2.2" as const,
       people: [archivedCase.person],
       cases: [archivedCase],
-      applications: [],
+      applications: [archivedApplication],
       financials: [],
       notes: [],
       alerts: [],
@@ -93,12 +98,18 @@ describe("CaseArchiveService.archiveCases", () => {
   it("restores the exact previously-read archive payload on rollback", async () => {
     // ARRANGE
     const caseToArchive = createArchivableCase("new");
+    const applicationToArchive = createMockApplication({
+      id: "application-new",
+      caseId: caseToArchive.id,
+      applicantPersonId: caseToArchive.person.id,
+    });
     const persistedArchiveData = createPersistedArchiveDataV22();
 
     fileStorage.readFileData.mockResolvedValue({
       version: "2.1",
       people: [caseToArchive.person],
       cases: [caseToArchive],
+      applications: [applicationToArchive],
       financials: [],
       notes: [],
       alerts: [],
@@ -121,6 +132,10 @@ describe("CaseArchiveService.archiveCases", () => {
       expect.objectContaining({
         version: "2.2",
         archiveType: "cases",
+        applications: expect.arrayContaining([
+          expect.objectContaining({ id: "application-existing" }),
+          expect.objectContaining({ id: "application-new" }),
+        ]),
       }),
     );
     expect(fileService.writeNamedFile).toHaveBeenNthCalledWith(
@@ -137,11 +152,17 @@ describe("CaseArchiveService.archiveCases", () => {
   it("notifies file storage changes after a successful archive write", async () => {
     // ARRANGE
     const caseToArchive = createArchivableCase("new");
+    const applicationToArchive = createMockApplication({
+      id: "application-new",
+      caseId: caseToArchive.id,
+      applicantPersonId: caseToArchive.person.id,
+    });
 
     fileStorage.readFileData.mockResolvedValue({
       version: "2.1",
       people: [caseToArchive.person],
       cases: [caseToArchive],
+      applications: [applicationToArchive],
       financials: [],
       notes: [],
       alerts: [],
@@ -163,6 +184,9 @@ describe("CaseArchiveService.archiveCases", () => {
       archiveFileName: "archived-cases-2026.json",
       archivedCaseIds: ["new"],
     });
+    expect(fileStorage.writeNormalizedData).toHaveBeenCalledWith(
+      expect.objectContaining({ applications: [] }),
+    );
     expect(mockSafeNotifyFileStorageChange).toHaveBeenCalledTimes(1);
   });
 
@@ -174,6 +198,7 @@ describe("CaseArchiveService.archiveCases", () => {
       version: "2.1",
       people: [caseToArchive.person],
       cases: [caseToArchive],
+      applications: [],
       financials: [],
       notes: [],
       alerts: [],

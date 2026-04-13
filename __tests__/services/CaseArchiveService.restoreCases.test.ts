@@ -4,7 +4,7 @@
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { CaseArchiveService } from "@/utils/services/CaseArchiveService";
-import { createMockPerson, createMockStoredCase } from "@/src/test/testUtils";
+import { createMockApplication, createMockPerson, createMockStoredCase } from "@/src/test/testUtils";
 import { mergeCategoryConfig } from "@/types/categoryConfig";
 import { dehydrateNormalizedData } from "@/utils/persistedV22Storage";
 import { LegacyFormatError } from "@/utils/services/FileStorageService";
@@ -35,11 +35,23 @@ function createStoredCase(id: string, status: StoredCase["status"] = "Archived")
 
 function createArchiveData() {
   return {
-    version: "1.0" as const,
+    version: "2.2" as const,
     archiveType: "cases" as const,
     archivedAt: new Date("2025-12-01").toISOString(),
     archiveYear: 2025,
     cases: [createStoredCase("c1"), createStoredCase("c2")],
+    applications: [
+      createMockApplication({
+        id: "application-c1",
+        caseId: "c1",
+        applicantPersonId: "person-c1",
+      }),
+      createMockApplication({
+        id: "application-c2",
+        caseId: "c2",
+        applicantPersonId: "person-c2",
+      }),
+    ],
     financials: [
       {
         id: "f1",
@@ -91,7 +103,7 @@ function createPersistedArchiveDataV22() {
       version: "2.2" as const,
       people: archiveData.cases.map((caseItem) => caseItem.person),
       cases: archiveData.cases,
-      applications: [],
+      applications: archiveData.applications,
       financials: archiveData.financials,
       notes: archiveData.notes,
       alerts: [],
@@ -124,6 +136,13 @@ describe("CaseArchiveService.restoreCases", () => {
     fileStorage = {
       readFileData: vi.fn().mockResolvedValue({
         cases: [createStoredCase("existing", "Active")],
+        applications: [
+          createMockApplication({
+            id: "application-existing",
+            caseId: "existing",
+            applicantPersonId: "person-existing",
+          }),
+        ],
         financials: [],
         notes: [],
         alerts: [],
@@ -156,6 +175,10 @@ describe("CaseArchiveService.restoreCases", () => {
     expect(fileStorage.writeNormalizedData).toHaveBeenCalledTimes(1);
     const writtenMain = fileStorage.writeNormalizedData.mock.calls[0][0];
     expect(writtenMain.cases.map((c: { id: string }) => c.id)).toEqual(["existing", "c1"]);
+    expect(writtenMain.applications.map((application: { id: string }) => application.id)).toEqual([
+      "application-existing",
+      "application-c1",
+    ]);
     expect(writtenMain.financials.map((f: { id: string }) => f.id)).toEqual(["f1"]);
     expect(writtenMain.notes.map((n: { id: string }) => n.id)).toEqual(["n1"]);
 
@@ -166,6 +189,7 @@ describe("CaseArchiveService.restoreCases", () => {
       archiveType: "cases",
       people: [expect.objectContaining({ id: "person-c2" })],
       cases: [expect.objectContaining({ id: "c2" })],
+      applications: [expect.objectContaining({ id: "application-c2" })],
     });
   });
 
