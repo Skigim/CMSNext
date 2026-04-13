@@ -157,6 +157,7 @@ The application follows a layered, local-first architecture designed to keep bus
   - `version: "2.2"`
   - `people: Person[]`
   - `cases: StoredCase[]`
+  - `applications?: Application[]` (FK: `caseId`)
   - `financials: Financial[]` (FK: `caseId`)
   - `notes: Note[]` (FK: `caseId`)
   - `alerts: Alert[]` (FK: `caseId`)
@@ -168,6 +169,7 @@ The application follows a layered, local-first architecture designed to keep bus
 - Avoid introducing nested or denormalized structures; new fields should extend existing records, not embed cross-cutting data.
 - Persisted v2.2 data is hydrated/dehydrated through the existing storage helpers.
 - Legacy v2.1, v2.0, and older nested data must be upgraded outside the current runtime before normal reads; runtime paths now treat them as unsupported input.
+- Archive files use the same strict v2.2 normalized collections plus archive metadata and round-trip canonical applications with cases, financials, and notes.
 
 ### UI, Themes, and Color System
 

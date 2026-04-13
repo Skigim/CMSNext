@@ -61,7 +61,7 @@ You are the CMSNext services specialist. Your job is to keep orchestration code 
 - Services own application workflow sequencing; `storage` owns persistence implementation details.
 - Domain modules own pure calculations and validation.
 - Hooks consume `DataManager`; components consume hooks.
-- File-backed writes must preserve normalized v2.1 expectations.
+- File-backed writes must preserve strict canonical persisted v2.2 expectations; normal runtime flows do not upgrade legacy workspace or archive files.
 - Errors should be handled consistently with existing utilities.
 
 ## Output Format

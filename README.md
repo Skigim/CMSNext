@@ -56,6 +56,7 @@ The current app combines:
 
 - Cases can be queued for archival review, archived into yearly archive files, browsed later, searched, and restored.
 - Archive files use the naming pattern `archived-cases-YYYY.json`.
+- Archive files are strict canonical persisted v2.2 payloads and round-trip cases, applications, financials, and notes.
 - JSON import/export tooling is available from Settings, along with alerts CSV import and storage diagnostics.
 
 ### Appearance and settings
@@ -101,7 +102,7 @@ interface PersistedNormalizedFileDataV22 {
 
 > **Naming convention note:** The mixed use of `StoredPerson` and `PersistedCase` reflects the evolution of the type system. `StoredPerson` distinguishes the persisted shape from the hydrated `Person` (which includes circular references), while `PersistedCase` distinguishes the on-disk format from `StoredCase` (the hydrated runtime case). This intentional distinction helps developers understand the different transformation layers.
 
-Persisted v2.2 data is hydrated and dehydrated through the storage helpers. Normal runtime reads now accept only canonical persisted v2.2 workspaces and archive files; legacy v2.1, v2.0, and older formats must be upgraded outside the current runtime, using a previous CMSNext version. The generic read/dehydrate path no longer synthesizes canonical `applications[]` from case-embedded compatibility fields, so application ownership is expected to be written by the owning create/edit flows. During the v2.2 cutover, some service-level mutation paths still reconcile canonical applications alongside case updates.
+Persisted v2.2 data is hydrated and dehydrated through the storage helpers. Normal runtime reads now accept only canonical persisted v2.2 workspaces and archive files; legacy v2.1, v2.0, and older formats must be upgraded outside the current runtime, using a previous CMSNext version. The generic read/dehydrate path no longer synthesizes canonical `applications[]` from case-embedded compatibility fields, so the owning create, edit, archive, and restore flows must round-trip canonical application data explicitly.
 
 ### Case-model surfaces
 

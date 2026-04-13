@@ -267,9 +267,10 @@ All data is stored in a flat, normalized JSON format. No nested case-level struc
 
 ```typescript
 interface NormalizedFileData {
-  version: "2.1";
+  version: "2.2";
   people: Person[]; // Global people registry
   cases: StoredCase[]; // Runtime-hydrated cases
+  applications?: Application[]; // Canonical application records linked by caseId
   financials: StoredFinancialItem[]; // id, caseId (FK), amount, type, etc.
   notes: StoredNote[]; // id, caseId (FK), content, etc.
   alerts: AlertRecord[]; // id, caseId (FK), message, severity, etc.

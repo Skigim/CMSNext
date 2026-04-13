@@ -6,6 +6,7 @@
 
 - App type: local-first SPA (no backend required)
 - Storage: File System Access API via provider/service stack
+- Runtime data contract: normal reads accept only canonical persisted v2.2 workspace/archive files; archive round-trips applications alongside cases, financials, and notes
 - Architecture: domain (pure) -> services -> hooks -> components -> contexts
 - Testing: Vitest + RTL
 

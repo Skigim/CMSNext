@@ -14,7 +14,8 @@ Use this reference first on every CMSNext task before deeper reasoning, searches
 - UI preferences go through `createLocalStorageAdapter`, never direct `window.localStorage` access.
 - LocalStorage keys created via `createLocalStorageAdapter` must use the `cmsnext-[feature-name]` pattern, where `[feature-name]` is a short kebab-case identifier.
 - Passwords and sensitive session secrets belong in `useRef` or transient session state, not persisted storage.
-- The main persisted format is normalized v2.1 with `people`, `cases`, `financials`, `notes`, `alerts`, `categoryConfig`, `activityLog`, and optional `templates`.
+- The main persisted format is strict canonical v2.2 with `people`, `cases`, optional `applications`, `financials`, `notes`, `alerts`, `categoryConfig`, `activityLog`, and optional `templates`.
+- Normal runtime reads accept only canonical persisted v2.2 workspace and archive files; older schemas must be upgraded outside the current runtime.
 
 ## Service And Hook Conventions
 

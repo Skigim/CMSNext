@@ -643,7 +643,7 @@ Tooling stack (Vitest, ESLint 9 flat config, Tailwind v4 pipeline) covers day-to
 - **Comprehensive test harness**: 1626 passing tests across unit, RTL, integration, and domain suites with coverage reporting
 - **Service Architecture**: DataManager (461 lines) + 7 focused services totaling 2,265 lines
 - **Dependency Injection**: Clean service composition with focused responsibilities
-- **Storage Normalization**: v2.1 normalized format with automatic migration from v2.0 and older legacy formats
+- **Storage Normalization**: strict canonical persisted v2.2 workspace/archive format; outdated schemas must be upgraded outside the current runtime
 - **Dev container** and documented setup enable consistent onboarding
 - **CLI utilities** (`scripts/`) generate sample data, run performance baselines, and capture usage reports
 - **Linting/formatting** standardized via ESLint 9 + Prettier; zero warning baseline

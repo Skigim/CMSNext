@@ -270,13 +270,14 @@ export function useFinancialSummary(caseId: string) {
 }
 ```
 
-## Data Format (v2.1 Normalized)
+## Data Format (v2.2 Normalized)
 
 ```typescript
 interface NormalizedFileData {
-  version: "2.1";
+  version: "2.2";
   people: Person[]; // Global people registry
   cases: StoredCase[]; // Runtime-hydrated cases
+  applications?: Application[]; // Canonical application records linked by caseId
   financials: Financial[]; // id, caseId (FK), amount, type, etc.
   notes: Note[]; // id, caseId (FK), content, createdAt, etc.
   alerts: Alert[]; // id, caseId (FK), message, severity, etc.
@@ -290,7 +291,8 @@ interface NormalizedFileData {
 
 - Flat arrays with foreign keys - **no nested structures**
 - Persisted v2.2 data is hydrated/dehydrated through the existing storage helpers
-- Normal runtime reads accept only canonical persisted v2.2 files; older schemas surface `LegacyFormatError` and must be upgraded outside the current runtime path
+- Normal runtime reads accept only canonical persisted v2.2 workspace and archive files; older schemas surface `LegacyFormatError` and must be upgraded outside the current runtime path
+- Archive files use the same normalized collections plus archive metadata and round-trip canonical applications alongside cases, financials, and notes
 
 ## Form Data Factories
 
