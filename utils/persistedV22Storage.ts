@@ -258,7 +258,7 @@ export function buildPersistedArchiveDataV22(
     version: "2.2",
     people: [],
     cases: cloneArchiveCases(archiveData.cases),
-    applications: [],
+    applications: archiveData.applications.map(normalizePersistedApplication),
     financials: archiveData.financials.map((financial) => ({ ...financial })),
     notes: archiveData.notes.map((note) => ({ ...note })),
     alerts: [],
@@ -284,18 +284,19 @@ export function hydratePersistedArchiveDataV22(
   const hydratedData = hydrateNormalizedData(data);
 
   return {
-    version: "1.0",
+    version: "2.2",
     archiveType: "cases",
     archivedAt: data.archivedAt,
     archiveYear: data.archiveYear,
     cases: hydratedData.cases,
+    applications: hydratedData.applications?.map(normalizePersistedApplication) ?? [],
     financials: hydratedData.financials,
     notes: hydratedData.notes,
   };
 }
 
-function normalizeName(value: string): string {
-  return value.trim().replaceAll(/\s+/g, " ").toLowerCase();
+function normalizeName(value: string | null | undefined): string {
+  return (value ?? "").trim().replaceAll(/\s+/g, " ").toLowerCase();
 }
 
 function buildCasePeopleRefs(

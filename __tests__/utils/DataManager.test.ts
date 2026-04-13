@@ -270,39 +270,14 @@ describe("DataManager", () => {
       // Verify the instance was constructed successfully with readonly members
       expect(dataManager.getAllCases).toBeDefined();
       expect(dataManager.getCategoryConfig).toBeDefined();
-      expect(dataManager.readRawFileData).toBeDefined();
-    });
-  });
-
-  describe("readRawFileData", () => {
-    it("returns raw data from fileStorage", async () => {
-      const rawData = { version: "2.0", cases: [{ id: "1" }] };
-      (mockFileStorageService.readRawFileData as ReturnType<typeof vi.fn>).mockResolvedValue(rawData);
-
-      const result = await dataManager.readRawFileData();
-      expect(result).toEqual(rawData);
-    });
-
-    it("returns null when no data exists", async () => {
-      (mockFileStorageService.readRawFileData as ReturnType<typeof vi.fn>).mockResolvedValue(null);
-
-      const result = await dataManager.readRawFileData();
-      expect(result).toBeNull();
     });
   });
 
   describe("runtime storage surface", () => {
-    it("still exposes readRawFileData for explicit non-runtime callers", async () => {
-      // ARRANGE
-      const rawData = { version: "2.2", cases: [] };
-      (mockFileStorageService.readRawFileData as ReturnType<typeof vi.fn>).mockResolvedValue(rawData);
-
-      // ACT & ASSERT
-      await expect(dataManager.readRawFileData()).resolves.toEqual(rawData);
-    });
-
-    it("does not expose migrateWorkspaceToV22 or migrateWorkspaceToV21", () => {
+    it("does not expose migration-only workspace APIs", () => {
       // ASSERT
+      expect("readRawFileData" in dataManager).toBe(false);
+      expect("migrateFinancialsWithoutHistory" in dataManager).toBe(false);
       expect("migrateWorkspaceToV22" in dataManager).toBe(false);
       expect("migrateWorkspaceToV21" in dataManager).toBe(false);
     });

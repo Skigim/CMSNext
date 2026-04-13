@@ -8,13 +8,14 @@
  * @module types/archive
  */
 
+import type { Application } from "./application";
 import type { StoredCase, StoredFinancialItem, StoredNote } from "./case";
 
 /**
  * Data format version for archive files.
  * Increment when making breaking changes to archive structure.
  */
-export const ARCHIVE_VERSION = "1.0" as const;
+export const ARCHIVE_VERSION = "2.2" as const;
 
 /**
  * Data structure for case archive files.
@@ -26,7 +27,7 @@ export const ARCHIVE_VERSION = "1.0" as const;
  * @example
  * File: archived-cases-2025.json
  * {
- *   version: "1.0",
+ *   version: "2.2",
  *   archiveType: "cases",
  *   archivedAt: "2026-01-22T10:30:00.000Z",
  *   archiveYear: 2025,
@@ -36,7 +37,7 @@ export const ARCHIVE_VERSION = "1.0" as const;
  * }
  */
 export interface CaseArchiveData {
-  /** Archive format version (always "1.0") */
+  /** Archive format version (always "2.2") */
   version: typeof ARCHIVE_VERSION;
   /** Type discriminator for archive files */
   archiveType: "cases";
@@ -46,6 +47,8 @@ export interface CaseArchiveData {
   archiveYear: number;
   /** Archived cases (without nested financials/notes) */
   cases: StoredCase[];
+  /** Canonical applications belonging to archived cases (linked by caseId) */
+  applications: Application[];
   /** Financials belonging to archived cases (linked by caseId) */
   financials: StoredFinancialItem[];
   /** Notes belonging to archived cases (linked by caseId) */
@@ -71,6 +74,7 @@ export function isCaseArchiveData(data: unknown): data is CaseArchiveData {
     typeof candidate.archivedAt === "string" &&
     typeof candidate.archiveYear === "number" &&
     Array.isArray(candidate.cases) &&
+    Array.isArray(candidate.applications) &&
     Array.isArray(candidate.financials) &&
     Array.isArray(candidate.notes)
   );

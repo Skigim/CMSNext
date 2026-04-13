@@ -11,15 +11,11 @@ import {
   createMockNormalizedFileData,
   createMockNormalizedFileDataV20,
   createMockPersistedNormalizedFileData,
-  createMockPersistedNormalizedFileDataV21,
   createMockPerson,
   createMockStoredCase,
 } from "@/src/test/testUtils";
 import type AutosaveFileService from "@/utils/AutosaveFileService";
-import {
-  migrateV20ToV21,
-  type PersistedNormalizedFileDataV21,
-} from "@/utils/persistedV22Storage";
+import { migrateV20ToV21 } from "@/utils/persistedV22Storage";
 
 describe("FileStorageService v2.2", () => {
   let fileStorage: FileStorageService;
@@ -40,25 +36,6 @@ describe("FileStorageService v2.2", () => {
       fileService: mockFileService as unknown as AutosaveFileService,
     });
   });
-
-  function createSingleApplicantStoredCase(
-    personOverrides: Parameters<typeof createMockPerson>[0],
-    caseOverrides: Parameters<typeof createMockStoredCase>[0] = {},
-  ) {
-    const person = createMockPerson(personOverrides);
-
-    return createMockStoredCase({
-      id: "case-1",
-      person,
-      people: [{ personId: person.id, role: "applicant", isPrimary: true }],
-      caseRecord: {
-        ...createMockStoredCase().caseRecord,
-        personId: person.id,
-        ...caseOverrides.caseRecord,
-      },
-      ...caseOverrides,
-    });
-  }
 
   function expectCanonicalCaseApplicationFields(
     writtenRuntimeData: NormalizedFileData,
@@ -155,167 +132,6 @@ describe("FileStorageService v2.2", () => {
 
     // ASSERT
     expect(result).toBeNull();
-    expect(mockFileService.writeFile).not.toHaveBeenCalled();
-  });
-
-  it("returns persisted v2.1 data unchanged for explicit migration utilities", async () => {
-    // ARRANGE
-    const hydratedCase = createSingleApplicantStoredCase(
-      {
-        id: "person-1",
-        firstName: "Hydrated",
-        lastName: "Person",
-        name: "Hydrated Person",
-        createdAt: "2026-01-01T00:00:00.000Z",
-        updatedAt: "2026-01-02T00:00:00.000Z",
-        dateAdded: "2026-01-01T00:00:00.000Z",
-      },
-      {
-        name: "Hydrated Person",
-        mcn: "MCN123456",
-        createdAt: "2026-01-01T00:00:00.000Z",
-        updatedAt: "2026-01-02T00:00:00.000Z",
-      },
-    );
-    const persistedData = createMockPersistedNormalizedFileDataV21({
-      people: [hydratedCase.person],
-      cases: [hydratedCase],
-      exported_at: "2026-03-01T00:00:00.000Z",
-      total_cases: 1,
-    });
-    mockFileService.readFile.mockResolvedValue(persistedData);
-
-    // ACT
-    const result = await fileStorage.readRawFileData() as PersistedNormalizedFileDataV21 | null;
-
-    // ASSERT
-    expect(result?.version).toBe("2.1");
-    expect(result?.people).toHaveLength(1);
-    expect(result?.people[0]).toMatchObject({ id: "person-1", name: "Hydrated Person" });
-    expect(result?.cases).toHaveLength(1);
-    expect(result?.cases[0]).toMatchObject({
-      name: "Hydrated Person",
-      people: [{ personId: "person-1", role: "applicant", isPrimary: true }],
-      caseRecord: expect.objectContaining({ personId: "person-1" }),
-    });
-    expect(mockFileService.writeFile).not.toHaveBeenCalled();
-  });
-
-  it("returns migrated applications unchanged for explicit migration utilities", async () => {
-    // ARRANGE
-    const migratedPersistedData = migrateV20ToV21({
-      ...createMockNormalizedFileDataV20(),
-      cases: [
-        createMockStoredCase({
-          id: "case-application-migration",
-          person: createMockPerson({
-            id: "person-application-migration",
-            firstName: "Mira",
-            lastName: "Grant",
-            name: "Mira Grant",
-            relationships: undefined,
-            createdAt: "2026-01-01T00:00:00.000Z",
-            updatedAt: undefined,
-          }),
-          people: undefined,
-          caseRecord: {
-            ...createMockStoredCase().caseRecord,
-            applicationDate: "2026-02-14",
-            applicationType: "Renewal",
-            withWaiver: true,
-            retroRequested: "2026-02-01",
-          },
-        }),
-      ],
-      exported_at: "2026-03-01T00:00:00.000Z",
-      total_cases: 1,
-    });
-    mockFileService.readFile.mockResolvedValue(migratedPersistedData);
-
-    // ACT
-    const result = await fileStorage.readRawFileData() as PersistedNormalizedFileDataV21 | null;
-
-    // ASSERT
-    expect(result?.applications).toHaveLength(1);
-    expect(result?.applications?.[0]).toMatchObject({
-      caseId: "case-application-migration",
-      applicationType: "Renewal",
-      hasWaiver: true,
-      retroRequestedAt: "2026-02-01",
-    });
-    expect(mockFileService.writeFile).not.toHaveBeenCalled();
-  });
-
-  it("returns invalid persisted v2.1 payloads unchanged for explicit migration validation", async () => {
-    // ARRANGE
-    const invalidPersistedData = createMockPersistedNormalizedFileDataV21({
-      cases: [
-        createMockStoredCase({
-          id: "case-invalid",
-          person: createMockPerson({ id: "person-missing" }),
-          people: [{ personId: "person-missing", role: "applicant", isPrimary: true }],
-          caseRecord: {
-            ...createMockStoredCase().caseRecord,
-            personId: "person-missing",
-          },
-        }),
-      ],
-      exported_at: "2026-03-01T00:00:00.000Z",
-      total_cases: 1,
-    });
-    mockFileService.readFile.mockResolvedValue({
-      ...invalidPersistedData,
-      people: [],
-    });
-
-    // ACT
-    const result = await fileStorage.readRawFileData() as PersistedNormalizedFileDataV21 | null;
-
-    // ASSERT
-    expect(result).toMatchObject({
-      version: "2.1",
-      people: [],
-      cases: [expect.objectContaining({ id: "case-invalid" })],
-    });
-  });
-
-  it("returns v2.1 workspaces migrated from v2.0 unchanged for explicit migration utilities", async () => {
-    // ARRANGE
-    const migratedPersistedData = migrateV20ToV21({
-      ...createMockNormalizedFileDataV20(),
-      cases: [
-        createSingleApplicantStoredCase(
-          {
-            id: "person-1",
-            firstName: "Migrated",
-            lastName: "Workspace",
-            name: "Migrated Workspace",
-            relationships: undefined,
-            createdAt: "2026-01-01T00:00:00.000Z",
-            updatedAt: undefined,
-          },
-          {
-            people: undefined,
-          },
-        ),
-      ],
-      exported_at: "2026-03-01T00:00:00.000Z",
-      total_cases: 1,
-    });
-    mockFileService.readFile.mockResolvedValue(migratedPersistedData);
-
-    // ACT
-    const result = await fileStorage.readRawFileData() as PersistedNormalizedFileDataV21 | null;
-
-    // ASSERT
-    expect(result?.version).toBe("2.1");
-    expect(result?.people).toHaveLength(1);
-    expect(result?.people[0]).toMatchObject({ id: "person-1", name: "Migrated Workspace" });
-    expect(result?.cases).toHaveLength(1);
-    expect(result?.cases[0]).toMatchObject({
-      name: "Migrated Workspace",
-      caseRecord: expect.objectContaining({ personId: "person-1" }),
-    });
     expect(mockFileService.writeFile).not.toHaveBeenCalled();
   });
 

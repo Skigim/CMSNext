@@ -6,6 +6,7 @@
  * @module domain/archive/archivalLogic
  */
 
+import type { Application } from "../../types/application";
 import type { StoredCase, StoredFinancialItem, StoredNote } from "../../types/case";
 import type { CaseArchiveData, ArchivalSettings } from "../../types/archive";
 import { ARCHIVE_VERSION } from "../../types/archive";
@@ -246,17 +247,19 @@ export function getCasesInArchivalQueue(cases: StoredCase[]): StoredCase[] {
  * 
  * @param existing - Existing archive data (or null for new archive)
  * @param newCases - New cases to add
+ * @param newApplications - New applications to add
  * @param newFinancials - New financials to add
  * @param newNotes - New notes to add
  * @param archiveYear - Year for the archive
  * @returns Merged archive data
  * 
  * @example
- * const merged = mergeArchiveData(existingArchive, newCases, newFinancials, newNotes, 2025);
+ * const merged = mergeArchiveData(existingArchive, newCases, newApplications, newFinancials, newNotes, 2025);
  */
 export function mergeArchiveData(
   existing: CaseArchiveData | null,
   newCases: StoredCase[],
+  newApplications: Application[],
   newFinancials: StoredFinancialItem[],
   newNotes: StoredNote[],
   archiveYear: number
@@ -271,6 +274,7 @@ export function mergeArchiveData(
       archivedAt: now,
       archiveYear,
       cases: newCases,
+      applications: newApplications,
       financials: newFinancials,
       notes: newNotes,
     };
@@ -278,6 +282,7 @@ export function mergeArchiveData(
   
   // Merge with existing, avoiding duplicates
   const existingCaseIds = new Set(existing.cases.map(c => c.id));
+  const existingApplicationIds = new Set(existing.applications.map(application => application.id));
   const existingFinancialIds = new Set(existing.financials.map(f => f.id));
   const existingNoteIds = new Set(existing.notes.map(n => n.id));
   
@@ -290,6 +295,11 @@ export function mergeArchiveData(
     ...existing.financials,
     ...newFinancials.filter(f => !existingFinancialIds.has(f.id)),
   ];
+
+  const mergedApplications = [
+    ...existing.applications,
+    ...newApplications.filter(application => !existingApplicationIds.has(application.id)),
+  ];
   
   const mergedNotes = [
     ...existing.notes,
@@ -300,6 +310,7 @@ export function mergeArchiveData(
     ...existing,
     archivedAt: now,
     cases: mergedCases,
+    applications: mergedApplications,
     financials: mergedFinancials,
     notes: mergedNotes,
   };
@@ -320,6 +331,9 @@ export function removeCasesFromArchive(
   const idsToRemove = new Set(caseIdsToRemove);
   
   const remainingCases = archive.cases.filter(c => !idsToRemove.has(c.id));
+  const remainingApplications = archive.applications.filter(
+    application => !idsToRemove.has(application.caseId),
+  );
   const remainingFinancials = archive.financials.filter(f => !idsToRemove.has(f.caseId));
   const remainingNotes = archive.notes.filter(n => !idsToRemove.has(n.caseId));
   
@@ -332,6 +346,7 @@ export function removeCasesFromArchive(
     ...archive,
     archivedAt: new Date().toISOString(),
     cases: remainingCases,
+    applications: remainingApplications,
     financials: remainingFinancials,
     notes: remainingNotes,
   };

@@ -158,10 +158,16 @@ describe('ActivityLogService', () => {
     });
 
     it('should archive old entries and write archive file', async () => {
-      const entries = [
-        makeEntry({ id: 'recent', timestamp: daysAgo(10) }),
+      const archivedEntries = [
         makeEntry({ id: 'old1', timestamp: daysAgo(DEFAULT_ACTIVITY_RETENTION_DAYS + 10) }),
         makeEntry({ id: 'old2', timestamp: daysAgo(DEFAULT_ACTIVITY_RETENTION_DAYS + 20) }),
+      ];
+      const expectedArchiveYears = new Set(
+        archivedEntries.map((entry) => new Date(entry.timestamp).getFullYear())
+      );
+      const entries = [
+        makeEntry({ id: 'recent', timestamp: daysAgo(10) }),
+        ...archivedEntries,
       ];
       const fileStorage = createMockFileStorage(entries);
       const fileService = createMockFileService();
@@ -174,21 +180,27 @@ describe('ActivityLogService', () => {
 
       expect(result.archivedCount).toBe(2);
       expect(result.retainedCount).toBe(1);
-      expect(result.archiveFileNames).toHaveLength(1);
-      expect(result.archiveFileNames[0]).toMatch(/^activityLog-archive-\d{4}\.json$/);
+      expect(result.archiveFileNames).toHaveLength(expectedArchiveYears.size);
+      expect(result.archiveFileNames).toSatisfy((fileNames: string[]) =>
+        fileNames.every((fileName) => /^activityLog-archive-\d{4}\.json$/.test(fileName))
+      );
 
       // Verify archive file was written
       expect(fileService.writeNamedFile).toHaveBeenCalled();
       const writtenFileName = fileService.writeNamedFile.mock.calls[0][0];
       const writtenPayload = fileService.writeNamedFile.mock.calls[0][1] as {
         type: string;
+        year: number;
         entries: CaseActivityEntry[];
         entryCount: number;
       };
       expect(writtenPayload.type).toBe('activityLog-archive');
-      expect(writtenPayload.entries).toHaveLength(2);
-      expect(writtenPayload.entryCount).toBe(2);
-      expect(writtenFileName).toBe(result.archiveFileNames[0]);
+      const expectedEntriesForFirstFile = archivedEntries.filter(
+        (entry) => new Date(entry.timestamp).getFullYear() === writtenPayload.year
+      );
+      expect(writtenPayload.entries).toHaveLength(expectedEntriesForFirstFile.length);
+      expect(writtenPayload.entryCount).toBe(expectedEntriesForFirstFile.length);
+      expect(result.archiveFileNames).toContain(writtenFileName);
     });
 
     it('should merge with existing archive file', async () => {

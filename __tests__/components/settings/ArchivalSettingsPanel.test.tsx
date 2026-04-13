@@ -47,7 +47,7 @@ vi.mock("@/contexts/CategoryConfigContext", () => ({
 }));
 
 const mockArchiveData: CaseArchiveData = {
-  version: "1.0",
+  version: "2.2",
   archiveType: "cases",
   archivedAt: new Date("2025-12-01").toISOString(),
   archiveYear: 2025,
@@ -81,6 +81,7 @@ const mockArchiveData: CaseArchiveData = {
       },
     } as unknown as StoredCase,
   ],
+  applications: [],
   financials: [],
   notes: [],
 };
