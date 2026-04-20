@@ -27,6 +27,8 @@ const READ_ONLY_STARTUP_TOOLS = new Set([
   "get_vscode_api",
   "github_repo",
   "github-pull-request_doSearch",
+  "skill",
+  "activate_skill",
 ]);
 
 if (state?.status === "complete") {
@@ -42,7 +44,7 @@ if (isAllowedStartupTool(toolName, input.tool_input)) {
   process.exit(0);
 }
 
-if (toolName === "run_in_terminal" && isMarkerCommand(input.tool_input)) {
+if (isMarkerToolInvocation(toolName, input.tool_input)) {
   respond("allow");
   process.exit(0);
 }
@@ -76,10 +78,7 @@ function isAllowedParallelStartupTool(toolInput) {
       return true;
     }
 
-    return (
-      nestedToolName === "run_in_terminal" &&
-      isMarkerCommand(toolUse?.parameters)
-    );
+    return isMarkerToolInvocation(nestedToolName, toolUse?.parameters);
   });
 }
 
@@ -93,6 +92,10 @@ function isReadOnlyStartupTool(toolName, toolInput) {
   }
 
   return false;
+}
+
+function isMarkerToolInvocation(toolName, toolInput) {
+  return toolName.length > 0 && isMarkerCommand(toolInput);
 }
 
 function isMarkerCommand(toolInput) {
