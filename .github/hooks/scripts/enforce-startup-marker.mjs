@@ -6,14 +6,27 @@ const toolName = normalizeToolName(input.tool_name);
 const statePath = getStatePath(input.cwd);
 const state = readState(statePath);
 
-const ALLOWED_STARTUP_TOOLS = new Set([
+const READ_ONLY_STARTUP_TOOLS = new Set([
   "read_file",
   "file_search",
   "grep_search",
   "list_dir",
   "fetch_webpage",
   "semantic_search",
-  "memory",
+  "search_subagent",
+  "get_changed_files",
+  "get_errors",
+  "test_failure",
+  "copilot_getNotebookSummary",
+  "get_task_output",
+  "get_terminal_output",
+  "terminal_last_command",
+  "terminal_selection",
+  "vscode_listCodeUsages",
+  "get_project_setup_info",
+  "get_vscode_api",
+  "github_repo",
+  "github-pull-request_doSearch",
 ]);
 
 if (state?.status === "complete") {
@@ -40,7 +53,7 @@ respond(
 );
 
 function isAllowedStartupTool(toolName, toolInput) {
-  if (ALLOWED_STARTUP_TOOLS.has(toolName)) {
+  if (isReadOnlyStartupTool(toolName, toolInput)) {
     return true;
   }
 
@@ -59,7 +72,7 @@ function isAllowedParallelStartupTool(toolInput) {
 
   return toolUses.every((toolUse) => {
     const nestedToolName = normalizeToolName(toolUse?.recipient_name);
-    if (ALLOWED_STARTUP_TOOLS.has(nestedToolName)) {
+    if (isReadOnlyStartupTool(nestedToolName, toolUse?.parameters)) {
       return true;
     }
 
@@ -68,6 +81,18 @@ function isAllowedParallelStartupTool(toolInput) {
       isMarkerCommand(toolUse?.parameters)
     );
   });
+}
+
+function isReadOnlyStartupTool(toolName, toolInput) {
+  if (READ_ONLY_STARTUP_TOOLS.has(toolName)) {
+    return true;
+  }
+
+  if (toolName === "memory") {
+    return toolInput?.command === "view";
+  }
+
+  return false;
 }
 
 function isMarkerCommand(toolInput) {
