@@ -6,12 +6,22 @@ const toolName = normalizeToolName(input.tool_name);
 const statePath = getStatePath(input.cwd);
 const state = readState(statePath);
 
+const ALLOWED_STARTUP_TOOLS = new Set([
+  "read_file",
+  "file_search",
+  "grep_search",
+  "list_dir",
+  "fetch_webpage",
+  "semantic_search",
+  "memory",
+]);
+
 if (state?.status === "complete") {
   respond("allow");
   process.exit(0);
 }
 
-if (isAllowedStartupTool(toolName)) {
+if (isAllowedStartupTool(toolName, input.tool_input)) {
   respond(
     "allow",
     "Startup guard still pending. Load `skills/using-superpowers/SKILL.md`, then `repo-memories`, then `skill-governance`, then any more specific applicable skill, and run `node .github/hooks/scripts/mark-startup-complete.mjs <skill-name|none>`."
@@ -29,16 +39,35 @@ respond(
   "CMSNext startup guard: load `skills/using-superpowers/SKILL.md`, then `repo-memories`, then `skill-governance`, then any more specific applicable skill, and run `node .github/hooks/scripts/mark-startup-complete.mjs <skill-name|none>` before using other tools."
 );
 
-function isAllowedStartupTool(toolName) {
-  return new Set([
-    "read_file",
-    "file_search",
-    "grep_search",
-    "list_dir",
-    "fetch_webpage",
-    "semantic_search",
-    "memory",
-  ]).has(toolName);
+function isAllowedStartupTool(toolName, toolInput) {
+  if (ALLOWED_STARTUP_TOOLS.has(toolName)) {
+    return true;
+  }
+
+  if (toolName === "parallel") {
+    return isAllowedParallelStartupTool(toolInput);
+  }
+
+  return false;
+}
+
+function isAllowedParallelStartupTool(toolInput) {
+  const toolUses = Array.isArray(toolInput?.tool_uses) ? toolInput.tool_uses : [];
+  if (toolUses.length === 0) {
+    return false;
+  }
+
+  return toolUses.every((toolUse) => {
+    const nestedToolName = normalizeToolName(toolUse?.recipient_name);
+    if (ALLOWED_STARTUP_TOOLS.has(nestedToolName)) {
+      return true;
+    }
+
+    return (
+      nestedToolName === "run_in_terminal" &&
+      isMarkerCommand(toolUse?.parameters)
+    );
+  });
 }
 
 function isMarkerCommand(toolInput) {
