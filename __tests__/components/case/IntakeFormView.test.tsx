@@ -819,6 +819,62 @@ describe("IntakeFormView", () => {
       expect(mockSubmit).not.toHaveBeenCalled();
       expect(mockGoNext).not.toHaveBeenCalled();
     });
+
+    it("uses the latest submit handler after the shortcut frame is flushed", () => {
+      // ARRANGE
+      const queuedFrames: FrameRequestCallback[] = [];
+      const requestAnimationFrameSpy = vi
+        .spyOn(globalThis, "requestAnimationFrame")
+        .mockImplementation((callback: FrameRequestCallback) => {
+          queuedFrames.push(callback);
+          return queuedFrames.length;
+        });
+      const cancelAnimationFrameSpy = vi
+        .spyOn(globalThis, "cancelAnimationFrame")
+        .mockImplementation(() => undefined);
+      const initialGoNext = vi.fn();
+      const refreshedGoNext = vi.fn();
+
+      withCaseDetailsStepState({
+        isCurrentStepComplete: true,
+        goNext: initialGoNext,
+      });
+
+      const { rerender } = renderIntakeFormView();
+      const queuedFrameCountAfterRender = queuedFrames.length;
+
+      // ACT
+      fireEvent.keyDown(screen.getByLabelText(/MCN/i), {
+        key: "Enter",
+        ctrlKey: true,
+      });
+
+      // ASSERT
+      expect(initialGoNext).not.toHaveBeenCalled();
+      expect(queuedFrames).toHaveLength(queuedFrameCountAfterRender + 1);
+
+      // ARRANGE
+      withCaseDetailsStepState({
+        isCurrentStepComplete: true,
+        goNext: refreshedGoNext,
+      });
+
+      // ACT
+      rerender(
+        <IntakeFormView
+          onSuccess={vi.fn()}
+          onCancel={undefined}
+        />,
+      );
+      queuedFrames[queuedFrames.length - 1]?.(0);
+
+      // ASSERT
+      expect(initialGoNext).not.toHaveBeenCalled();
+      expect(refreshedGoNext).toHaveBeenCalledTimes(1);
+
+      requestAnimationFrameSpy.mockRestore();
+      cancelAnimationFrameSpy.mockRestore();
+    });
   });
 
   // --- Submit on last step --------------------------------------------------

@@ -288,4 +288,35 @@ describe("NotesPopover", () => {
       expect(mockUpdateNote).toHaveBeenCalledWith("case-1", "note-1", expectedPayload);
     });
   });
+
+  it("returns focus to the quick-add textarea after the category dropdown closes", async () => {
+    // ARRANGE
+    const { user } = await setupQuickAdd();
+    const quickAddTextarea = screen.getByPlaceholderText("Type your note...");
+
+    // ACT
+    await user.type(quickAddTextarea, "Keyboard shortcut note");
+    await user.click(
+      screen.getByRole("button", {
+        name: "Select note categories: General",
+      }),
+    );
+    await user.click(screen.getByRole("option", { name: /follow up/i }));
+    await user.keyboard("{Escape}");
+
+    // ASSERT
+    expect(quickAddTextarea).toHaveFocus();
+
+    // ACT
+    await user.keyboard("{Control>}{Enter}{/Control}");
+
+    // ASSERT
+    await waitFor(() => {
+      expect(mockAddNote).toHaveBeenCalledWith("case-1", {
+        content: "Keyboard shortcut note",
+        category: "Follow Up",
+        categories: ["Follow Up"],
+      });
+    });
+  });
 });

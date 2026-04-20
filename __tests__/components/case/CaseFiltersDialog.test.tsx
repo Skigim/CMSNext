@@ -23,22 +23,6 @@ vi.mock("@/hooks/useAppViewState", () => ({
   }),
 }));
 
-const advancedAlertFilterState: UseAdvancedAlertFilterResult = {
-  filter: createEmptyAdvancedFilter(),
-  includeCriteria: [],
-  excludeCriteria: [],
-  addCriterion: vi.fn<(criterion?: FilterCriterion) => void>(),
-  addExcludeCriterion: vi.fn<(criterion?: FilterCriterion) => void>(),
-  updateCriterion: vi.fn<
-    (id: string, updates: Partial<Omit<FilterCriterion, "id">>) => void
-  >(),
-  removeCriterion: vi.fn<(id: string) => void>(),
-  toggleNegate: vi.fn<(id: string) => void>(),
-  setLogic: vi.fn<(logic: "and" | "or") => void>(),
-  resetFilter: vi.fn<() => void>(),
-  hasActiveAdvancedFilters: false,
-};
-
 const filters: CaseFilters = {
   statuses: [],
   priorityOnly: false,
@@ -49,6 +33,27 @@ const filters: CaseFilters = {
   showCompleted: true,
 };
 
+function createAdvancedAlertFilterState(
+  overrides: Partial<UseAdvancedAlertFilterResult> = {},
+): UseAdvancedAlertFilterResult {
+  return {
+    filter: createEmptyAdvancedFilter(),
+    includeCriteria: [],
+    excludeCriteria: [],
+    addCriterion: vi.fn<(criterion?: FilterCriterion) => void>(),
+    addExcludeCriterion: vi.fn<(criterion?: FilterCriterion) => void>(),
+    updateCriterion: vi.fn<
+      (id: string, updates: Partial<Omit<FilterCriterion, "id">>) => void
+    >(),
+    removeCriterion: vi.fn<(id: string) => void>(),
+    toggleNegate: vi.fn<(id: string) => void>(),
+    setLogic: vi.fn<(logic: "and" | "or") => void>(),
+    resetFilter: vi.fn<() => void>(),
+    hasActiveAdvancedFilters: false,
+    ...overrides,
+  };
+}
+
 describe("CaseFiltersDialog", () => {
   it("provides an accessible dialog description", async () => {
     // Arrange
@@ -58,7 +63,7 @@ describe("CaseFiltersDialog", () => {
         onOpenChange={vi.fn()}
         filters={filters}
         onFiltersChange={vi.fn()}
-        advancedAlertFilterState={advancedAlertFilterState}
+        advancedAlertFilterState={createAdvancedAlertFilterState()}
       />,
     );
 
@@ -70,5 +75,57 @@ describe("CaseFiltersDialog", () => {
     expect(screen.getByRole("dialog", { name: "Filter cases" })).toHaveAccessibleDescription(
       "Narrow the case list by status, priority, date range, completion state, and alert filters.",
     );
+  });
+
+  it("clears stale alert description filters when the available descriptions disappear", () => {
+    // ARRANGE
+    const onFiltersChange = vi.fn();
+    const advancedState = createAdvancedAlertFilterState({
+      filter: {
+        logic: "and",
+        criteria: [
+          {
+            id: "criterion-1",
+            field: "description",
+            operator: "equals",
+            value: ["Court Notice"],
+            negate: false,
+          },
+        ],
+      },
+      hasActiveAdvancedFilters: true,
+    });
+
+    const { rerender } = render(
+      <CaseFiltersDialog
+        open={false}
+        onOpenChange={vi.fn()}
+        filters={{ ...filters, alertDescription: "Court Notice" }}
+        onFiltersChange={onFiltersChange}
+        segment="alerts"
+        alertDescriptions={["Court Notice"]}
+        advancedAlertFilterState={advancedState}
+      />,
+    );
+
+    // ACT
+    rerender(
+      <CaseFiltersDialog
+        open={false}
+        onOpenChange={vi.fn()}
+        filters={{ ...filters, alertDescription: "Court Notice" }}
+        onFiltersChange={onFiltersChange}
+        segment="alerts"
+        alertDescriptions={[]}
+        advancedAlertFilterState={advancedState}
+      />,
+    );
+
+    // ASSERT
+    expect(onFiltersChange).toHaveBeenCalledWith({
+      ...filters,
+      alertDescription: "all",
+    });
+    expect(advancedState.removeCriterion).toHaveBeenCalledWith("criterion-1");
   });
 });

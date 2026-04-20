@@ -32,6 +32,7 @@ interface MultiSelectProps {
   ariaLabel?: string;
   disabled?: boolean;
   className?: string;
+  onCloseAutoFocus?: React.ComponentProps<typeof PopoverContent>["onCloseAutoFocus"];
 }
 
 function getTriggerLabel(
@@ -61,6 +62,7 @@ const MultiSelect = React.forwardRef<HTMLButtonElement, MultiSelectProps>(
       ariaLabel,
       disabled = false,
       className,
+      onCloseAutoFocus,
     },
     ref,
   ) => {
@@ -127,6 +129,7 @@ const MultiSelect = React.forwardRef<HTMLButtonElement, MultiSelectProps>(
           align="start"
           aria-label={ariaLabel ?? placeholder}
           className="w-[var(--radix-popover-trigger-width)] min-w-52 p-0"
+          onCloseAutoFocus={onCloseAutoFocus}
         >
           <Command>
             <div className="border-b py-1">

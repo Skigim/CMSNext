@@ -2096,12 +2096,34 @@ export function IntakeFormView({
     ? canSubmit && !isSubmitting
     : isCurrentStepComplete && !isSubmitting;
   const contentWidthClassName = isLastStep ? "max-w-4xl" : "max-w-2xl";
+  const shortcutFrameRef = useRef<number | null>(null);
+  const submitRef = useRef(submit);
+  const goNextRef = useRef(goNext);
+  const canUseSubmitShortcutRef = useRef(canUseSubmitShortcut);
+  const isLastStepRef = useRef(isLastStep);
+
+  useEffect(() => {
+    submitRef.current = submit;
+    goNextRef.current = goNext;
+    canUseSubmitShortcutRef.current = canUseSubmitShortcut;
+    isLastStepRef.current = isLastStep;
+  }, [canUseSubmitShortcut, goNext, isLastStep, submit]);
 
   useEffect(() => {
     const stepContent = stepContentRef.current;
     if (!stepContent) {
       return undefined;
     }
+
+    const shouldDeferShortcut = (target: EventTarget | null) => {
+      if (!(target instanceof HTMLElement) || target === stepContent) {
+        return false;
+      }
+
+      return target.closest(
+        "input, textarea, select, [role='combobox'], [contenteditable='true']",
+      ) !== null;
+    };
 
     const handleStepContentKeyDown = (event: KeyboardEvent) => {
       if (
@@ -2114,20 +2136,44 @@ export function IntakeFormView({
 
       event.preventDefault();
 
-      if (isLastStep) {
-        void submit();
+      const invokeShortcut = () => {
+        if (!canUseSubmitShortcutRef.current) {
+          return;
+        }
+
+        if (isLastStepRef.current) {
+          void submitRef.current();
+          return;
+        }
+
+        goNextRef.current();
+      };
+
+      if (!shouldDeferShortcut(event.target)) {
+        invokeShortcut();
         return;
       }
 
-      goNext();
+      if (shortcutFrameRef.current !== null) {
+        globalThis.cancelAnimationFrame(shortcutFrameRef.current);
+      }
+
+      shortcutFrameRef.current = globalThis.requestAnimationFrame(() => {
+        shortcutFrameRef.current = null;
+        invokeShortcut();
+      });
     };
 
     stepContent.addEventListener("keydown", handleStepContentKeyDown);
 
     return () => {
+      if (shortcutFrameRef.current !== null) {
+        globalThis.cancelAnimationFrame(shortcutFrameRef.current);
+        shortcutFrameRef.current = null;
+      }
       stepContent.removeEventListener("keydown", handleStepContentKeyDown);
     };
-  }, [canUseSubmitShortcut, goNext, isLastStep, submit]);
+  }, [canUseSubmitShortcut]);
 
   const submitButtonLoadingText = isEditing ? "Saving…" : "Creating…";
   const submitButtonText = isEditing ? "Save Changes" : "Submit Case";

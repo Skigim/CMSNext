@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -90,6 +90,66 @@ export function CaseFiltersDialog({
       .filter((criterion) => isManagedDescriptionCriterion(criterion, true))
       .flatMap((criterion) => toValueList(criterion.value));
   }, [advancedFilter.criteria, isManagedDescriptionCriterion, toValueList]);
+
+  const availableAlertDescriptions = useMemo(
+    () => new Set(alertDescriptions.map((description) => description.trim()).filter(Boolean)),
+    [alertDescriptions],
+  );
+
+  useEffect(() => {
+    if (segment !== "alerts") {
+      return;
+    }
+
+    if (
+      filters.alertDescription !== "all" &&
+      !availableAlertDescriptions.has(filters.alertDescription)
+    ) {
+      onFiltersChange({
+        ...filters,
+        alertDescription: "all",
+      });
+    }
+
+    if (!enableAdvancedAlertFilters) {
+      return;
+    }
+
+    for (const criterion of advancedFilter.criteria) {
+      if (criterion.field !== "description") {
+        continue;
+      }
+
+      const currentValues = toValueList(criterion.value);
+      const nextValues = currentValues.filter((value) => availableAlertDescriptions.has(value));
+
+      if (nextValues.length === currentValues.length) {
+        continue;
+      }
+
+      if (nextValues.length === 0) {
+        removeCriterion(criterion.id);
+        continue;
+      }
+
+      updateCriterion(criterion.id, {
+        field: "description",
+        operator: criterion.operator,
+        value: Array.isArray(criterion.value) ? nextValues : nextValues[0] ?? "",
+        negate: criterion.negate,
+      });
+    }
+  }, [
+    advancedFilter.criteria,
+    availableAlertDescriptions,
+    enableAdvancedAlertFilters,
+    filters,
+    onFiltersChange,
+    removeCriterion,
+    segment,
+    toValueList,
+    updateCriterion,
+  ]);
 
   const activeFilterCount = useMemo(() => {
     let count = 0;

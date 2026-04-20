@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useRef } from "react";
 import { formatShortDate } from "@/domain/common";
 import { Button } from "../ui/button";
 import { MultiSelect } from "../ui/multi-select";
@@ -30,6 +30,8 @@ export function NotesPopover({ caseId, className }: NotesPopoverProps) {
   const [editContent, setEditContent] = useState("");
   const [editCategories, setEditCategories] = useState<string[]>([]);
   const [newNoteCategories, setNewNoteCategories] = useState<string[]>([]);
+  const quickAddTextareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const editTextareaRef = useRef<HTMLTextAreaElement | null>(null);
   
   const { notes, addNote, updateNote, deleteNote } = useNotes(caseId);
   const { config } = useCategoryConfig();
@@ -148,6 +150,14 @@ export function NotesPopover({ caseId, className }: NotesPopoverProps) {
     }
   }, [handleAddNote]);
 
+  const restoreQuickAddFocus = useCallback(() => {
+    quickAddTextareaRef.current?.focus();
+  }, []);
+
+  const restoreEditFocus = useCallback(() => {
+    editTextareaRef.current?.focus();
+  }, []);
+
   const formatDate = formatShortDate;
 
   const sortedNotes = useMemo(() => {
@@ -199,6 +209,7 @@ export function NotesPopover({ caseId, className }: NotesPopoverProps) {
         {isAdding && (
           <div className="border-b p-3 space-y-2">
             <Textarea
+              ref={quickAddTextareaRef}
               value={newNoteContent}
               onChange={(e) => setNewNoteContent(e.target.value)}
               onKeyDown={handleKeyDown}
@@ -216,6 +227,10 @@ export function NotesPopover({ caseId, className }: NotesPopoverProps) {
                 emptyText="No categories found."
                 ariaLabel="Select note categories"
                 className="w-auto min-w-[10rem] max-w-full"
+                onCloseAutoFocus={(event) => {
+                  event.preventDefault();
+                  restoreQuickAddFocus();
+                }}
               />
               <span className="text-xs text-muted-foreground flex-1">
                 {navigator.platform.includes("Mac") ? "⌘" : "Ctrl"}+Enter
@@ -274,12 +289,17 @@ export function NotesPopover({ caseId, className }: NotesPopoverProps) {
                           emptyText="No categories found."
                           ariaLabel="Edit note categories"
                           className="h-6 w-auto min-w-[8rem] max-w-full px-2"
+                          onCloseAutoFocus={(event) => {
+                            event.preventDefault();
+                            restoreEditFocus();
+                          }}
                         />
                         <span className="text-xs text-muted-foreground">
                           {formatDate(note.createdAt)}
                         </span>
                       </div>
                       <Textarea
+                        ref={editTextareaRef}
                         value={editContent}
                         onChange={(e) => setEditContent(e.target.value)}
                         onKeyDown={(e) => handleEditKeyDown(e, note)}
