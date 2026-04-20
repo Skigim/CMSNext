@@ -128,7 +128,7 @@ async function selectCategories(
   );
 
   for (const optionName of optionNames) {
-    await user.click(screen.getByRole("option", { name: new RegExp(optionName, "i") }));
+    await user.click(screen.getByRole("menuitemcheckbox", { name: new RegExp(optionName, "i") }));
   }
 }
 
@@ -301,7 +301,7 @@ describe("NotesPopover", () => {
         name: "Select note categories: General",
       }),
     );
-    await user.click(screen.getByRole("option", { name: /follow up/i }));
+    await user.click(screen.getByRole("menuitemcheckbox", { name: /follow up/i }));
     await user.keyboard("{Escape}");
 
     // ASSERT

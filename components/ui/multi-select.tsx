@@ -1,20 +1,16 @@
 "use client";
 
 import * as React from "react";
-import { CheckIcon, ChevronDownIcon } from "lucide-react";
+import { ChevronDownIcon } from "lucide-react";
 
 import { Badge } from "./badge";
 import { Button } from "./button";
 import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "./command";
-import { Popover, PopoverContent, PopoverTrigger } from "./popover";
-import { ScrollArea } from "./scroll-area";
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from "./dropdown-menu";
 import { cn } from "./utils";
 
 export type MultiSelectOption = {
@@ -32,7 +28,40 @@ interface MultiSelectProps {
   ariaLabel?: string;
   disabled?: boolean;
   className?: string;
-  onCloseAutoFocus?: React.ComponentProps<typeof PopoverContent>["onCloseAutoFocus"];
+  onCloseAutoFocus?: React.ComponentProps<typeof DropdownMenuContent>["onCloseAutoFocus"];
+}
+
+const FOCUSABLE_SELECTOR = [
+  "button:not([disabled])",
+  "[href]",
+  "input:not([disabled])",
+  "select:not([disabled])",
+  "textarea:not([disabled])",
+  "[tabindex]:not([tabindex='-1'])",
+].join(", ");
+
+function focusAdjacentElement(
+  currentElement: HTMLElement,
+  direction: "next" | "previous",
+): void {
+  const document = currentElement.ownerDocument;
+  const focusableElements = Array.from(
+    document.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR),
+  ).filter(
+    (element) =>
+      !element.hasAttribute("disabled") &&
+      element.getAttribute("aria-hidden") !== "true",
+  );
+
+  const currentIndex = focusableElements.indexOf(currentElement);
+  if (currentIndex === -1) {
+    return;
+  }
+
+  const offset = direction === "next" ? 1 : -1;
+  const adjacentElement = focusableElements[currentIndex + offset];
+
+  adjacentElement?.focus();
 }
 
 function getTriggerLabel(
@@ -57,8 +86,6 @@ const MultiSelect = React.forwardRef<HTMLButtonElement, MultiSelectProps>(
       value,
       onValueChange,
       placeholder = "Select options",
-      searchPlaceholder = "Search options...",
-      emptyText = "No results found.",
       ariaLabel,
       disabled = false,
       className,
@@ -66,6 +93,10 @@ const MultiSelect = React.forwardRef<HTMLButtonElement, MultiSelectProps>(
     },
     ref,
   ) => {
+    const [open, setOpen] = React.useState(false);
+    const triggerRef = React.useRef<HTMLButtonElement | null>(null);
+    const shouldSkipCloseAutoFocusRef = React.useRef(false);
+
     const selectedOptions = React.useMemo(
       () => options.filter((option) => value.includes(option.value)),
       [options, value],
@@ -95,11 +126,27 @@ const MultiSelect = React.forwardRef<HTMLButtonElement, MultiSelectProps>(
       [disabled, onValueChange, value],
     );
 
+    const handleTriggerRef = React.useCallback(
+      (element: HTMLButtonElement | null) => {
+        triggerRef.current = element;
+
+        if (typeof ref === "function") {
+          ref(element);
+          return;
+        }
+
+        if (ref) {
+          ref.current = element;
+        }
+      },
+      [ref],
+    );
+
     return (
-      <Popover>
-        <PopoverTrigger asChild>
+      <DropdownMenu open={open} onOpenChange={setOpen} modal={false}>
+        <DropdownMenuTrigger asChild>
           <Button
-            ref={ref}
+            ref={handleTriggerRef}
             type="button"
             variant="outline"
             size="sm"
@@ -124,74 +171,61 @@ const MultiSelect = React.forwardRef<HTMLButtonElement, MultiSelectProps>(
             </span>
             <ChevronDownIcon className="size-3.5 shrink-0 opacity-60" />
           </Button>
-        </PopoverTrigger>
-        <PopoverContent
+        </DropdownMenuTrigger>
+        <DropdownMenuContent
           align="start"
-          aria-label={ariaLabel ?? placeholder}
-          className="w-[var(--radix-popover-trigger-width)] min-w-52 p-0"
-          onCloseAutoFocus={onCloseAutoFocus}
-        >
-          <Command>
-            <div className="border-b py-1">
-              <CommandInput
-                placeholder={searchPlaceholder}
-                aria-label={searchPlaceholder}
-              />
-            </div>
-            <div
-              className="overflow-hidden flex flex-col"
-              style={{ maxHeight: "32rem" }}
-            >
-              <ScrollArea className="h-full max-h-80">
-                <CommandList className="h-full">
-                  <CommandEmpty>{emptyText}</CommandEmpty>
-                  <CommandGroup className="pb-2">
-                    {options.map((option) => {
-                      const isSelected = value.includes(option.value);
+          className="w-[var(--radix-dropdown-menu-trigger-width)] min-w-52 p-1"
+          onKeyDownCapture={(event) => {
+            if (event.key === "Tab") {
+              shouldSkipCloseAutoFocusRef.current = true;
+              event.preventDefault();
+              setOpen(false);
 
-                      return (
-                        <CommandItem
-                          key={option.value}
-                          value={option.value}
-                          keywords={[option.label, option.value]}
-                          onSelect={handleSelect}
-                          className="justify-between gap-3 py-2 text-xs"
-                        >
-                          <span className="flex min-w-0 items-center gap-2">
-                            <span
-                              className={cn(
-                                "border-muted-foreground/30 flex size-4 shrink-0 items-center justify-center rounded-sm border",
-                                isSelected &&
-                                  "border-primary bg-primary text-primary-foreground",
-                              )}
-                            >
-                              <CheckIcon
-                                className={cn(
-                                  "size-3",
-                                  isSelected ? "opacity-100" : "opacity-0",
-                                )}
-                              />
-                            </span>
-                            <span className="truncate">{option.label}</span>
-                          </span>
-                          {isSelected ? (
-                            <Badge
-                              variant="secondary"
-                              className="h-5 shrink-0 px-1.5 text-[10px] font-medium"
-                            >
-                              Selected
-                            </Badge>
-                          ) : null}
-                        </CommandItem>
-                      );
-                    })}
-                  </CommandGroup>
-                </CommandList>
-              </ScrollArea>
-            </div>
-          </Command>
-        </PopoverContent>
-      </Popover>
+              if (triggerRef.current) {
+                focusAdjacentElement(
+                  triggerRef.current,
+                  event.shiftKey ? "previous" : "next",
+                );
+              }
+            }
+          }}
+          onCloseAutoFocus={(event) => {
+            if (shouldSkipCloseAutoFocusRef.current) {
+              shouldSkipCloseAutoFocusRef.current = false;
+              event.preventDefault();
+              return;
+            }
+
+            onCloseAutoFocus?.(event);
+          }}
+        >
+          {options.map((option) => {
+            const isSelected = value.includes(option.value);
+
+            return (
+              <DropdownMenuCheckboxItem
+                key={option.value}
+                checked={isSelected}
+                className="gap-3 py-2 text-xs"
+                onSelect={(event) => {
+                  event.preventDefault();
+                  handleSelect(option.value);
+                }}
+              >
+                <span className="truncate">{option.label}</span>
+                {isSelected ? (
+                  <Badge
+                    variant="secondary"
+                    className="ml-auto h-5 shrink-0 px-1.5 text-[10px] font-medium"
+                  >
+                    Selected
+                  </Badge>
+                ) : null}
+              </DropdownMenuCheckboxItem>
+            );
+          })}
+        </DropdownMenuContent>
+      </DropdownMenu>
     );
   },
 );
